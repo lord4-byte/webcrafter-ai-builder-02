@@ -1,5 +1,4 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,57 +13,49 @@ serve(async (req) => {
   try {
     const { title, description, outputFormat, colorTheme, template, animations, specialRequests, apiKeys } = await req.json();
 
-    // Determine the best framework based on the project description
+    // Determine the best framework based on the project description - DEFAULT TO REACT
     const determineFramework = (description: string, template: string, specialRequests: string): string => {
       const desc = description.toLowerCase();
       const tmpl = template.toLowerCase();
       const special = specialRequests.toLowerCase();
 
       // Check special requests first for specific framework mentions
-      if (special.includes('react')) return 'react';
-      if (special.includes('vue')) return 'vue';
-      if (special.includes('angular')) return 'angular';
-      if (special.includes('svelte')) return 'svelte';
-      if (special.includes('next')) return 'next';
-      if (special.includes('nuxt')) return 'nuxt';
+      if (special.includes('vue') && !special.includes('react')) return 'vue';
+      if (special.includes('angular') && !special.includes('react')) return 'angular';
+      if (special.includes('svelte') && !special.includes('react')) return 'svelte';
+      if (special.includes('nuxt') && !special.includes('react')) return 'nuxt';
       if (special.includes('python') || special.includes('flask') || special.includes('django')) return 'python';
       if (special.includes('php')) return 'php';
       if (special.includes('node') || special.includes('express')) return 'node';
       if (special.includes('vanilla') || special.includes('html')) return 'vanilla';
+      if (special.includes('next')) return 'next';
 
-      // Complex web applications - use React
-      if (desc.includes('dashboard') || desc.includes('admin') || desc.includes('complex') || 
-          desc.includes('interactive') || desc.includes('real-time') || tmpl.includes('dashboard') ||
-          desc.includes('spa') || desc.includes('single page')) {
-        return 'react';
-      }
-
-      // E-commerce or SaaS - use Next.js for SSR benefits
-      if (desc.includes('ecommerce') || desc.includes('store') || desc.includes('shop') || 
+      // E-commerce or SaaS - use Next.js for SSR benefits (unless React specified)
+      if (!special.includes('react') && (desc.includes('ecommerce') || desc.includes('store') || desc.includes('shop') || 
           desc.includes('saas') || desc.includes('payment') || tmpl.includes('ecommerce') || 
-          tmpl.includes('saas') || desc.includes('seo')) {
+          tmpl.includes('saas') || desc.includes('seo'))) {
         return 'next';
       }
 
-      // API or backend heavy - use appropriate backend framework
-      if (desc.includes('api') || desc.includes('backend') || desc.includes('server') ||
-          desc.includes('database') || desc.includes('rest') || desc.includes('graphql')) {
+      // API or backend heavy - use Node.js (unless React frontend specified)
+      if (!special.includes('frontend') && !special.includes('react') && (desc.includes('api') || desc.includes('backend') || desc.includes('server') ||
+          desc.includes('database') || desc.includes('rest') || desc.includes('graphql'))) {
         return 'node';
       }
 
-      // Simple websites - use vanilla for performance
-      if (desc.includes('simple') || desc.includes('static') || desc.includes('landing') || 
-          desc.includes('marketing') || tmpl.includes('landing') || desc.includes('brochure')) {
+      // Simple static websites - use vanilla (unless React specified)
+      if (!special.includes('react') && (desc.includes('simple') || desc.includes('static') || desc.includes('landing') || 
+          desc.includes('marketing') || tmpl.includes('landing') || desc.includes('brochure'))) {
         return 'vanilla';
       }
 
-      // Portfolio or blog - Vue for balance of simplicity and features
+      // Portfolio or blog - Use React (changed from Vue to align with default)
       if (desc.includes('portfolio') || desc.includes('blog') || desc.includes('personal') || 
           tmpl.includes('portfolio') || tmpl.includes('blog')) {
-        return 'vue';
+        return 'react';
       }
 
-      // Default to React for most modern web applications
+      // DEFAULT TO REACT for ALL modern web applications - production-ready React with TypeScript
       return 'react';
     };
 
@@ -109,13 +100,16 @@ serve(async (req) => {
     }
 
     const formatInstructions = {
-      'react': 'React with TypeScript and Tailwind CSS',
-      'vue': 'Vue 3 with Composition API and Tailwind CSS',
+      'react': 'React with TypeScript, Vite, and Tailwind CSS (PRODUCTION-READY)',
+      'vue': 'Vue 3 with Composition API, TypeScript, and Tailwind CSS',
       'angular': 'Angular with TypeScript and Tailwind CSS',
       'svelte': 'Svelte with TypeScript and Tailwind CSS',
-      'vanilla': 'Vanilla HTML, CSS, and JavaScript',
-      'next': 'Next.js with TypeScript and Tailwind CSS',
-      'nuxt': 'Nuxt 3 with TypeScript and Tailwind CSS'
+      'vanilla': 'Vanilla HTML5, Modern CSS3, and ES6+ JavaScript',
+      'next': 'Next.js with TypeScript, App Router, and Tailwind CSS',
+      'nuxt': 'Nuxt 3 with TypeScript and Tailwind CSS',
+      'python': 'Python with Flask/FastAPI and modern frontend',
+      'php': 'PHP with modern frontend integration',
+      'node': 'Node.js with Express and REST/GraphQL API'
     };
 
     const colorThemeMapping = {
@@ -141,18 +135,18 @@ serve(async (req) => {
       themeColors = colorThemeMapping[colorTheme as keyof typeof colorThemeMapping] || colorThemeMapping.blue;
     }
 
-    const systemPrompt = `You are an expert full-stack developer who creates complete, production-ready applications. You MUST create fully functional, deployable projects that work exactly like professional development platforms.
+    const systemPrompt = `You are an expert full-stack developer and AI agent who creates complete, production-ready applications exactly like Lovable.dev. You MUST generate fully functional, deployable projects with NO placeholders, NO mockups, and REAL implementations.
 
-Project Requirements:
+🎯 PROJECT SPECIFICATION:
 - Title: ${title}
 - Description: ${description}
-- Framework: ${framework} (${formatInstructions[framework as keyof typeof formatInstructions] || 'HTML/CSS/JS'})
+- Framework: ${framework} (${formatInstructions[framework as keyof typeof formatInstructions] || 'React with TypeScript'})
 - Color Theme: ${JSON.stringify(themeColors)}
-- Template Base: ${template || 'Custom'}
-- Animations: ${animations.join(', ') || 'None'}
+- Template Base: ${template || 'Custom Build'}
+- Animations: ${animations.join(', ') || 'Smooth Transitions'}
 - Special Requests: ${specialRequests || 'None'}
 
-CRITICAL REQUIREMENTS - You MUST implement ALL of these:
+🚀 MANDATORY REQUIREMENTS - YOU MUST IMPLEMENT ALL:
 
 1. **COMPLETE PROJECT STRUCTURE**: Create a fully working project with all necessary files including:
    - Complete source code files with proper file organization
@@ -162,43 +156,45 @@ CRITICAL REQUIREMENTS - You MUST implement ALL of these:
    - .gitignore file
    - All supporting files needed for deployment
 
-2. **PRODUCTION-READY CODE**: 
-   - Write clean, maintainable, well-commented code
-   - Use modern best practices and patterns
-   - Include proper error handling
-   - Implement responsive design that works on all devices
-   - Add proper accessibility features (ARIA labels, semantic HTML)
-   - Include loading states and user feedback
+2. **PRODUCTION-READY CODE WITH ZERO PLACEHOLDERS**: 
+   - Write COMPLETE, clean, maintainable code with detailed comments
+   - Use cutting-edge best practices and design patterns
+   - Include comprehensive error handling and loading states
+   - Implement fully responsive design that works perfectly on all devices
+   - Add complete accessibility features (ARIA labels, semantic HTML, keyboard navigation)
+   - Include smooth animations and professional UI/UX
 
-3. **REAL FUNCTIONALITY**: No mockups or placeholders:
-   - All buttons and forms must work
-   - Include proper state management
-   - Add actual animations and interactions
-   - Implement proper routing (if applicable)
-   - Include real API integration examples where relevant
+3. **100% REAL FUNCTIONALITY**: ABSOLUTELY NO MOCKUPS:
+   - ALL buttons, forms, and interactive elements MUST work completely
+   - Include sophisticated state management (Context API, reducers, custom hooks)
+   - Add beautiful, smooth animations and micro-interactions
+   - Implement complete routing with protected routes and navigation
+   - Include working API integration patterns and data fetching
+   - Add real form validation, error handling, and success states
 
-4. **COMPREHENSIVE FEATURES**:
-   - Multiple pages/components as needed
-   - Navigation system
-   - Contact forms with validation
-   - Interactive elements and animations
-   - Search functionality (if applicable)
-   - User interface components
-   - Data handling and storage examples
+4. **COMPREHENSIVE FEATURE SET**:
+   - Multiple interconnected pages/components with full navigation
+   - Complete navigation system with mobile menu and breadcrumbs
+   - Working contact forms with full validation and submission handling
+   - Rich interactive elements, hover effects, and animations
+   - Functional search with filtering and sorting (where applicable)
+   - Professional UI component library with variants and states
+   - Complete data handling with local storage, caching, and persistence
 
-5. **MODERN DEVELOPMENT STANDARDS**:
-   - TypeScript for type safety (when applicable)
-   - Component-based architecture
-   - Proper CSS organization with Tailwind
-   - Performance optimizations
-   - SEO best practices with proper meta tags
-   - Mobile-first responsive design
+5. **CUTTING-EDGE DEVELOPMENT STANDARDS**:
+   - TypeScript throughout with proper interfaces and type safety
+   - Advanced component architecture with composition patterns
+   - Sophisticated Tailwind CSS with custom configurations and themes
+   - Performance optimizations (lazy loading, code splitting, memoization)
+   - Complete SEO implementation with meta tags, structured data, and OpenGraph
+   - Mobile-first responsive design with perfect cross-device compatibility
 
-6. **DEPLOYMENT READY**:
-   - Include build scripts and configurations
-   - Optimize for production deployment
-   - Include environment configuration examples
-   - Add deployment instructions in README
+6. **ENTERPRISE DEPLOYMENT READY**:
+   - Complete build scripts, configurations, and optimization
+   - Production deployment configurations for Vercel, Netlify, AWS
+   - Environment configuration with proper secret management
+   - Comprehensive documentation with setup, development, and deployment guides
+   - CI/CD pipeline configurations and automated testing setup
 
 Respond in this exact JSON format:
 {

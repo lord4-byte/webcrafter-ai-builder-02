@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Wand2, Palette, Code, FileText, Sparkles, AlertCircle, Settings } from "lucide-react";
+import { Wand2, Palette, Code, FileText, Sparkles, AlertCircle, Settings, Upload, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import AnimationItem from "./AnimationItem";
@@ -123,6 +123,9 @@ const ProjectCreationWizard = ({ onCreateProject, isCreating }: ProjectCreationW
     secondary: "#10B981", 
     accent: "#F59E0B"
   });
+  const [uploadedPrompt, setUploadedPrompt] = useState<string | null>(null);
+  const [promptFileName, setPromptFileName] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     checkApiKeys();
@@ -151,6 +154,72 @@ const ProjectCreationWizard = ({ onCreateProject, isCreating }: ProjectCreationW
     } else {
       setSelectedAnimations([...animationOptions]);
     }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== 'text/plain' && !file.name.toLowerCase().endsWith('.txt')) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please upload a TXT file only.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (1MB limit)
+    if (file.size > 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Please upload a file smaller than 1MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const text = await file.text();
+      
+      // Validate content
+      if (!text.trim()) {
+        toast({
+          title: "Empty File",
+          description: "The uploaded file appears to be empty. Please upload a file with content.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setUploadedPrompt(text.trim());
+      setPromptFileName(file.name);
+      setDescription(text.trim()); // Set the description with the uploaded content
+      
+      toast({
+        title: "File Uploaded Successfully",
+        description: `Loaded prompt from ${file.name}`,
+      });
+    } catch (error) {
+      console.error('Error reading file:', error);
+      toast({
+        title: "Upload Failed",
+        description: "Failed to read the uploaded file. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+      // Reset the input
+      event.target.value = '';
+    }
+  };
+
+  const clearUpload = () => {
+    setUploadedPrompt(null);
+    setPromptFileName(null);
+    // Don't clear description automatically to allow user to edit
   };
 
   const handleCreateProject = () => {
@@ -246,13 +315,69 @@ const ProjectCreationWizard = ({ onCreateProject, isCreating }: ProjectCreationW
 
             <div className="space-y-2">
               <Label htmlFor="description">Project Description *</Label>
-              <Textarea
-                id="description"
-                placeholder="Describe what you want to build. Be as detailed as possible - this helps the AI understand your vision. Include features, target audience, style preferences, and any specific requirements."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={5}
-              />
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept=".txt"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="prompt-upload"
+                      disabled={isUploading}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById('prompt-upload')?.click()}
+                      disabled={isUploading}
+                      className="w-full"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {isUploading ? "Uploading..." : "Upload Prompt (TXT)"}
+                    </Button>
+                  </div>
+                  {uploadedPrompt && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={clearUpload}
+                      className="px-3"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+                
+                {promptFileName && (
+                  <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+                    <FileText className="w-4 h-4 text-green-600" />
+                    <span className="text-sm text-green-700 dark:text-green-300">
+                      Loaded from: {promptFileName}
+                    </span>
+                  </div>
+                )}
+                
+                <Textarea
+                  id="description"
+                  placeholder={uploadedPrompt ? 
+                    "Your uploaded prompt has been loaded. You can edit it here if needed..." : 
+                    "Describe what you want to build, or upload a TXT file with your prompt. Be as detailed as possible - this helps the AI understand your vision. Include features, target audience, style preferences, and any specific requirements."
+                  }
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={uploadedPrompt ? 8 : 5}
+                  className={uploadedPrompt ? "bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800" : ""}
+                />
+                
+                {uploadedPrompt && (
+                  <div className="text-xs text-muted-foreground">
+                    Preview of uploaded content (editable above). Character count: {description.length}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">

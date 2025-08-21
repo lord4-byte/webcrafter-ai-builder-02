@@ -3,7 +3,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Sparkles } from "lucide-react";
-import AnimationPreview from "./AnimationPreview";
+import AnimationPreviewModal from "./AnimationPreviewModal";
 
 interface AnimationItemProps {
   animation: string;
@@ -377,8 +377,6 @@ const animationDemos = {
 };
 
 const AnimationItem = ({ animation, isSelected, onToggle }: AnimationItemProps) => {
-  const [showPreview, setShowPreview] = useState(false);
-  
   const demoData = animationDemos[animation as keyof typeof animationDemos] || {
     name: animation,
     description: "Custom animation effect",
@@ -403,114 +401,16 @@ const AnimationItem = ({ animation, isSelected, onToggle }: AnimationItemProps) 
         </Label>
       </div>
 
-      {/* Play/Pause Preview Button */}
-      <button
-        onClick={() => setShowPreview(!showPreview)}
-        className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 transition-all duration-200 group"
-        aria-label={showPreview ? "Stop preview" : "Play preview"}
-      >
-        {showPreview ? (
-          <div className="w-2 h-2 bg-primary rounded-sm"></div>
-        ) : (
+      {/* Enhanced Preview Button */}
+      <AnimationPreviewModal>
+        <button
+          className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 transition-all duration-200 group"
+          aria-label="Preview animation"
+        >
           <div className="w-0 h-0 border-l-[6px] border-l-primary border-y-[4px] border-y-transparent ml-0.5"></div>
-        )}
-      </button>
+        </button>
+      </AnimationPreviewModal>
 
-      {/* Animation Preview Modal */}
-      {showPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="relative w-96 max-w-[90vw] bg-card border border-border rounded-xl shadow-2xl animate-scale-in">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                  <h3 className="font-semibold text-lg">{demoData.name}</h3>
-                </div>
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="w-6 h-6 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center text-xs"
-                >
-                  ×
-                </button>
-              </div>
-              
-              <p className="text-sm text-muted-foreground mb-4">{demoData.description}</p>
-              
-              {/* Live Animation Preview */}
-              <div className="bg-muted/20 rounded-lg p-6 flex items-center justify-center h-24 mb-4 relative overflow-hidden">
-                <style>
-                  {`
-                    .fade-in-demo { animation: previewFadeIn 2s ease-in-out infinite; }
-                    .slide-demo { animation: previewSlide 2s ease-out infinite; }
-                    .scale-demo { animation: previewScale 2s ease-out infinite; }
-                    .rotate-demo { animation: previewRotate 2s linear infinite; }
-                    .bounce-demo { animation: previewBounce 2s infinite; }
-                    .parallax-demo { animation: previewParallax 3s ease-in-out infinite; }
-                    .hover-demo { animation: previewHover 2s ease-in-out infinite; }
-                    .loading-demo { animation: previewLoading 1.5s linear infinite; }
-                    .text-demo { animation: previewText 3s ease-in-out infinite; }
-                    .card-demo { animation: previewCard 2.5s ease-in-out infinite; }
-                    
-                    @keyframes previewFadeIn { 
-                      0%, 100% { opacity: 0.3; transform: translateY(5px); } 
-                      50% { opacity: 1; transform: translateY(0); } 
-                    }
-                    @keyframes previewSlide { 
-                      0% { transform: translateX(-30px); opacity: 0.5; } 
-                      50% { transform: translateX(0); opacity: 1; } 
-                      100% { transform: translateX(30px); opacity: 0.5; } 
-                    }
-                    @keyframes previewScale { 
-                      0%, 100% { transform: scale(0.7); opacity: 0.8; } 
-                      50% { transform: scale(1.3); opacity: 1; } 
-                    }
-                    @keyframes previewRotate { 
-                      0% { transform: rotate(0deg) scale(0.8); } 
-                      50% { transform: rotate(180deg) scale(1.2); } 
-                      100% { transform: rotate(360deg) scale(0.8); } 
-                    }
-                    @keyframes previewBounce { 
-                      0%, 20%, 53%, 80%, 100% { transform: translate3d(0,0,0); } 
-                      40%, 43% { transform: translate3d(0, -15px, 0); } 
-                      70% { transform: translate3d(0, -8px, 0); } 
-                    }
-                    @keyframes previewParallax { 
-                      0%, 100% { transform: translateX(0) scale(1); } 
-                      50% { transform: translateX(-20px) scale(1.1); } 
-                    }
-                    @keyframes previewHover { 
-                      0%, 100% { transform: translateY(0) scale(1); box-shadow: 0 2px 4px rgba(0,0,0,0.1); } 
-                      50% { transform: translateY(-8px) scale(1.05); box-shadow: 0 8px 16px rgba(0,0,0,0.2); } 
-                    }
-                    @keyframes previewLoading { 
-                      0% { transform: rotate(0deg); opacity: 0.5; } 
-                      50% { opacity: 1; } 
-                      100% { transform: rotate(360deg); opacity: 0.5; } 
-                    }
-                    @keyframes previewText { 
-                      0%, 100% { transform: scale(1); filter: blur(0px); } 
-                      50% { transform: scale(1.1); filter: blur(1px); } 
-                    }
-                    @keyframes previewCard { 
-                      0%, 100% { transform: rotateY(0deg); } 
-                      25% { transform: rotateY(90deg); } 
-                      75% { transform: rotateY(270deg); } 
-                    }
-                  `}
-                </style>
-                <div className={`w-8 h-8 bg-gradient-to-r from-primary to-primary/60 rounded-lg ${demoData.preview}`}></div>
-              </div>
-              
-              <div className="bg-muted/10 rounded-lg p-3">
-                <div className="text-xs font-medium text-muted-foreground mb-2">CSS Code:</div>
-                <pre className="text-xs bg-muted/20 p-3 rounded overflow-x-auto">
-                  <code>{demoData.cssCode}</code>
-                </pre>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
