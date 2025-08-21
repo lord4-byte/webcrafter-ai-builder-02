@@ -96,16 +96,35 @@ const Settings = () => {
       // Also save to Supabase for persistence (if user is logged in)
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { error } = await supabase
-          .from('user_settings')
-          .upsert({
-            user_id: user.id,
-            api_keys: apiKeys as any,
-            selected_models: selectedModels as any,
-            updated_at: new Date().toISOString()
-          });
-        
-        if (error) {
+        try {
+          // Try to insert first, then update if exists
+          const { error: insertError } = await supabase
+            .from('user_settings')
+            .insert({
+              user_id: user.id,
+              api_keys: apiKeys as any,
+              selected_models: selectedModels as any,
+              updated_at: new Date().toISOString()
+            });
+          
+          // If insert fails due to duplicate, update existing record
+          if (insertError && insertError.code === '23505') {
+            const { error: updateError } = await supabase
+              .from('user_settings')
+              .update({
+                api_keys: apiKeys as any,
+                selected_models: selectedModels as any,
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_id', user.id);
+            
+            if (updateError) {
+              console.error('Error updating settings:', updateError);
+            }
+          } else if (insertError) {
+            console.error('Error inserting settings:', insertError);
+          }
+        } catch (error) {
           console.error('Error saving to database:', error);
         }
       }

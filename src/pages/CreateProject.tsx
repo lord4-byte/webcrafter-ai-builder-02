@@ -101,14 +101,18 @@ const CreateProject = () => {
         description: `Your AI-generated project "${config.title}" is ready!`,
       });
 
+      // Clear saved prompt data after successful creation
+      localStorage.removeItem('webcrafter_saved_prompt');
+      
       // Navigate to the builder with live generation view
       navigateToBuilder(project.id);
 
     } catch (error) {
       console.error('Error creating project:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to create project. Please try again.";
       toast({
         title: "Error",
-        description: "Failed to create project. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

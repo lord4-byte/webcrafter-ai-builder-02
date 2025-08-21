@@ -129,7 +129,61 @@ const ProjectCreationWizard = ({ onCreateProject, isCreating }: ProjectCreationW
 
   useEffect(() => {
     checkApiKeys();
+    loadSavedPrompt();
   }, []);
+
+  // Auto-save prompt data to prevent loss on refresh
+  useEffect(() => {
+    const promptData = {
+      title,
+      description,
+      colorTheme,
+      template,
+      selectedAnimations,
+      specialRequests,
+      customColors,
+      uploadedPrompt,
+      promptFileName
+    };
+    localStorage.setItem('webcrafter_saved_prompt', JSON.stringify(promptData));
+  }, [title, description, colorTheme, template, selectedAnimations, specialRequests, customColors, uploadedPrompt, promptFileName]);
+
+  const loadSavedPrompt = () => {
+    try {
+      const savedPrompt = localStorage.getItem('webcrafter_saved_prompt');
+      if (savedPrompt) {
+        const data = JSON.parse(savedPrompt);
+        setTitle(data.title || "");
+        setDescription(data.description || "");
+        setColorTheme(data.colorTheme || "");
+        setTemplate(data.template || "");
+        setSelectedAnimations(data.selectedAnimations || []);
+        setSpecialRequests(data.specialRequests || "");
+        setCustomColors(data.customColors || { primary: "#3B82F6", secondary: "#10B981", accent: "#F59E0B" });
+        setUploadedPrompt(data.uploadedPrompt || null);
+        setPromptFileName(data.promptFileName || null);
+      }
+    } catch (error) {
+      console.error('Error loading saved prompt:', error);
+    }
+  };
+
+  const clearSavedPrompt = () => {
+    localStorage.removeItem('webcrafter_saved_prompt');
+    setTitle("");
+    setDescription("");
+    setColorTheme("");
+    setTemplate("");
+    setSelectedAnimations([]);
+    setSpecialRequests("");
+    setCustomColors({ primary: "#3B82F6", secondary: "#10B981", accent: "#F59E0B" });
+    setUploadedPrompt(null);
+    setPromptFileName(null);
+    toast({
+      title: "Input Cleared",
+      description: "All form data has been reset.",
+    });
+  };
 
   const checkApiKeys = () => {
     const savedKeys = localStorage.getItem('webcrafter_api_keys');
@@ -345,10 +399,21 @@ const ProjectCreationWizard = ({ onCreateProject, isCreating }: ProjectCreationW
                       size="sm"
                       onClick={clearUpload}
                       className="px-3"
+                      title="Clear uploaded file"
                     >
                       <X className="w-4 h-4" />
                     </Button>
                   )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={clearSavedPrompt}
+                    className="px-3"
+                    title="Clear all input"
+                  >
+                    Clear All
+                  </Button>
                 </div>
                 
                 {promptFileName && (
