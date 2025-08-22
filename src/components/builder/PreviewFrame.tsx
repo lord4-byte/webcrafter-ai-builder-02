@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader, CheckCircle, Clock, FileCode, Sparkles, Home } from "lucide-react";
+import { Loader, CheckCircle, Clock, FileCode, Sparkles, Home, Play, Code } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import LiveDevServer from "./LiveDevServer";
 
 interface PreviewFrameProps {
   html: string;
@@ -10,6 +11,7 @@ interface PreviewFrameProps {
   isGenerating?: boolean;
   generationProgress?: { current: number; total: number; currentFile: string };
   projectFiles?: string[];
+  projectContent?: { [key: string]: string };
 }
 
 const PreviewFrame = ({ 
@@ -18,11 +20,13 @@ const PreviewFrame = ({
   js, 
   isGenerating = false, 
   generationProgress, 
-  projectFiles = [] 
+  projectFiles = [],
+  projectContent = {}
 }: PreviewFrameProps) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const navigate = useNavigate();
   const [showGenerationOverlay, setShowGenerationOverlay] = useState(false);
+  const [useDevServer, setUseDevServer] = useState(false);
 
   useEffect(() => {
     setShowGenerationOverlay(isGenerating);
@@ -294,6 +298,15 @@ const PreviewFrame = ({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => setUseDevServer(!useDevServer)}
+            className="text-primary-foreground hover:bg-white/20"
+          >
+            {useDevServer ? <Code className="w-4 h-4 mr-1" /> : <Play className="w-4 h-4 mr-1" />}
+            {useDevServer ? "Static" : "Dev Server"}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={refreshPreview}
             className="text-primary-foreground hover:bg-white/20"
           >
@@ -316,14 +329,23 @@ const PreviewFrame = ({
 
       {renderGenerationOverlay()}
 
-      <iframe
-        ref={iframeRef}
-        className={`w-full h-[calc(100%-48px)] border-0 transition-all duration-500 ${
-          showGenerationOverlay ? 'blur-sm scale-95' : 'blur-0 scale-100'
-        }`}
-        title="Preview"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-downloads"
-      />
+      {useDevServer ? (
+        <div className="h-[calc(100%-48px)]">
+          <LiveDevServer 
+            projectContent={projectContent} 
+            isVisible={useDevServer}
+          />
+        </div>
+      ) : (
+        <iframe
+          ref={iframeRef}
+          className={`w-full h-[calc(100%-48px)] border-0 transition-all duration-500 ${
+            showGenerationOverlay ? 'blur-sm scale-95' : 'blur-0 scale-100'
+          }`}
+          title="Preview"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-downloads"
+        />
+      )}
     </div>
   );
 };

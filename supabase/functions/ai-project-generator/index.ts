@@ -87,8 +87,10 @@ serve(async (req) => {
       model = 'deepseek-coder';
       headers['Authorization'] = `Bearer ${apiKey}`;
     } else if (apiKeys?.gemini && apiKeys.gemini.trim()) {
-      // Note: Gemini has a different API structure, this is simplified
-      throw new Error('Gemini API integration coming soon');
+      apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKeys.gemini}`;
+      apiKey = apiKeys.gemini;
+      model = 'gemini-2.5-flash';
+      headers['Content-Type'] = 'application/json';
     } else if (apiKeys?.anthropic && apiKeys.anthropic.trim()) {
       apiUrl = 'https://api.anthropic.com/v1/messages';
       apiKey = apiKeys.anthropic;
@@ -226,6 +228,20 @@ Generate a comprehensive, professional application that exceeds expectations and
         max_tokens: 8000,
         messages: [{ role: 'user', content: systemPrompt }]
       };
+    } else if (apiUrl.includes('gemini')) {
+      requestBody = {
+        contents: [{
+          parts: [{
+            text: systemPrompt
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.8,
+          topP: 0.9,
+          maxOutputTokens: 8000,
+          responseMimeType: "application/json"
+        }
+      };
     } else {
       requestBody = {
         model,
@@ -252,6 +268,8 @@ Generate a comprehensive, professional application that exceeds expectations and
     
     if (apiUrl.includes('anthropic')) {
       aiResponse = data.content[0]?.text;
+    } else if (apiUrl.includes('gemini')) {
+      aiResponse = data.candidates[0]?.content?.parts[0]?.text;
     } else {
       aiResponse = data.choices[0]?.message?.content;
     }

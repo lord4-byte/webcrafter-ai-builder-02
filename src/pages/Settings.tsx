@@ -37,6 +37,7 @@ interface SelectedModels {
   openrouter: string;
   deepseek: string;
   anthropic: string;
+  gemini: string;
 }
 
 const Settings = () => {
@@ -54,7 +55,8 @@ const Settings = () => {
     openai: 'gpt-4o-mini',
     openrouter: 'meta-llama/llama-3.2-3b-instruct:free',
     deepseek: 'deepseek-chat',
-    anthropic: 'claude-3-5-haiku-20241022'
+    anthropic: 'claude-3-5-haiku-20241022',
+    gemini: 'gemini-2.5-flash'
   });
   const [showKeys, setShowKeys] = useState<{[key: string]: boolean}>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -166,36 +168,40 @@ const Settings = () => {
       name: 'OpenAI',
       description: 'GPT-4, GPT-3.5 models for advanced AI assistance',
       placeholder: 'sk-...',
-      website: 'https://platform.openai.com/api-keys'
+      website: 'https://platform.openai.com/api-keys',
+      disabled: false
     },
     {
       id: 'openrouter',
       name: 'OpenRouter',
       description: 'Access to multiple AI models with competitive pricing',
       placeholder: 'sk-or-v1-...',
-      website: 'https://openrouter.ai/keys'
+      website: 'https://openrouter.ai/keys',
+      disabled: false
     },
     {
       id: 'deepseek',
       name: 'DeepSeek',
       description: 'High-performance coding AI models',
       placeholder: 'sk-...',
-      website: 'https://platform.deepseek.com/api_keys'
+      website: 'https://platform.deepseek.com/api_keys',
+      disabled: false
     },
     {
       id: 'anthropic',
       name: 'Anthropic',
       description: 'Claude models for thoughtful AI assistance',
       placeholder: 'sk-ant-...',
-      website: 'https://console.anthropic.com/account/keys'
+      website: 'https://console.anthropic.com/account/keys',
+      disabled: false
     },
     {
       id: 'gemini',
       name: 'Google Gemini',
-      description: 'Google\'s advanced AI models (Coming Soon)',
+      description: 'Google\'s advanced AI models for production use',
       placeholder: 'AIza...',
       website: 'https://aistudio.google.com/app/apikey',
-      disabled: true
+      disabled: false
     }
   ];
 

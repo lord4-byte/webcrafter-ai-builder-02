@@ -50,6 +50,21 @@ const modelsByProvider = {
     { name: 'deepseek-chat', type: 'paid', description: 'General purpose chat model' },
     { name: 'deepseek-coder', type: 'paid', description: 'Specialized for coding' },
     { name: 'deepseek-reasoner', type: 'paid', description: 'Advanced reasoning model' },
+  ],
+  gemini: [
+    { name: 'gemini-2.5-flash', type: 'free', description: 'Best free model for general use' },
+    { name: 'gemini-2.5-flash-lite', type: 'free', description: 'Cost-efficient free model' },
+    { name: 'gemini-2.0-flash', type: 'free', description: 'Fast free model' },
+    { name: 'gemini-2.0-flash-lite', type: 'free', description: 'Lightweight free model' },
+    { name: 'gemini-2.0-flash-live', type: 'free', description: 'Real-time free model' },
+    { name: 'gemini-2.5-pro', type: 'paid', description: 'Most capable paid model' },
+    { name: 'gemini-2.5-flash-live-preview', type: 'paid', description: 'Live preview model' },
+    { name: 'gemini-2.5-native-audio-dialog', type: 'paid', description: 'Audio dialog model' },
+    { name: 'gemini-2.5-tts', type: 'paid', description: 'Text-to-speech model' },
+    { name: 'gemini-2.0-flash-image-gen', type: 'paid', description: 'Image generation model' },
+    { name: 'gemini-2.5-flash-native-audio', type: 'paid', description: 'Native audio model' },
+    { name: 'gemini-2.5-flash-preview-tts', type: 'paid', description: 'Preview TTS model' },
+    { name: 'gemini-2.5-pro-preview-tts', type: 'paid', description: 'Pro preview TTS model' },
   ]
 };
 

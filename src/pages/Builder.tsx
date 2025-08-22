@@ -340,7 +340,7 @@ Generated on: ${new Date().toLocaleDateString()}
               <ResizableHandle />
               
               {/* Code Editor Panel */}
-              <ResizablePanel defaultSize={showChat ? 30 : 35} minSize={25}>
+              <ResizablePanel defaultSize={showChat ? 80 : 75} minSize={25}>
                 <div className="h-full">
                   {selectedFile ? (
                     <div className="h-full flex flex-col">
@@ -365,20 +365,6 @@ Generated on: ${new Date().toLocaleDateString()}
                   )}
                 </div>
               </ResizablePanel>
-              
-              <ResizableHandle />
-              
-              {/* Preview Panel */}
-              <ResizablePanel defaultSize={showChat ? 25 : 40} minSize={25}>
-              <PreviewFrame 
-                html={project.content.html || project.content['index.html'] || ''}
-                css={project.content.css || project.content['styles.css'] || ''}
-                js={project.content.js || project.content['script.js'] || ''}
-                isGenerating={isGenerating}
-                generationProgress={generationProgress}
-                projectFiles={availableFiles}
-              />
-              </ResizablePanel>
             </>
           ) : (
             <ResizablePanel defaultSize={showChat ? 75 : 100}>
@@ -389,6 +375,7 @@ Generated on: ${new Date().toLocaleDateString()}
                 isGenerating={isGenerating}
                 generationProgress={generationProgress}
                 projectFiles={availableFiles}
+                projectContent={project.content}
               />
             </ResizablePanel>
           )}
