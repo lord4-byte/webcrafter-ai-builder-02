@@ -69,44 +69,60 @@ const outputFormats = [
   { value: "php", label: "PHP", description: "PHP web application" },
 ];
 
-const animationOptions = [
-  "Fade In/Out",
-  "Slide Animations", 
-  "Scale Effects",
-  "Rotate Animations",
-  "Bounce Effects",
-  "Parallax Scrolling",
-  "Hover Animations",
-  "Loading Animations",
-  "Page Transitions",
-  "Typing Effects",
-  "Particle Effects",
-  "3D Transforms",
-  "Scroll Animations",
-  "Micro-interactions",
-  "CSS Animations",
-  "GSAP Animations",
-  "Morphing Effects",
-  "Glitch Effects",
-  "Neon Glow Effects",
-  "Liquid Motion",
-  "Glass Morphism",
-  "Neumorphism",
-  "Floating Elements",
-  "Magnetic Effects",
-  "Wave Animations",
-  "Gradient Animations",
-  "Text Reveal Effects",
-  "Image Hover Effects",
-  "Button Animations",
-  "Navigation Transitions",
-  "Loading Spinners",
-  "Progress Bars",
-  "Countdown Timers",
-  "Interactive Cursors",
-  "Sticky Elements",
-  "Infinite Scroll",
-];
+const animationCategories = {
+  background: [
+    "Parallax Scrolling",
+    "Gradient Animations",
+    "Wave Animations",
+    "Liquid Motion",
+    "Floating Elements"
+  ],
+  effects: [
+    "Particle Effects",
+    "Glitch Effects",
+    "Neon Glow Effects",
+    "Glass Morphism",
+    "Neumorphism",
+    "3D Transforms",
+    "Morphing Effects"
+  ],
+  hover: [
+    "Hover Animations",
+    "Scale Effects",
+    "Image Hover Effects",
+    "Button Animations",
+    "Magnetic Effects",
+    "Micro-interactions"
+  ],
+  transitions: [
+    "Fade In/Out",
+    "Slide Animations",
+    "Page Transitions",
+    "Navigation Transitions",
+    "Text Reveal Effects",
+    "Scroll Animations"
+  ],
+  loading: [
+    "Loading Animations",
+    "Loading Spinners",
+    "Progress Bars",
+    "Bounce Effects",
+    "Rotate Animations"
+  ],
+  gaming: [
+    "Typing Effects",
+    "Countdown Timers",
+    "Interactive Cursors",
+    "Sticky Elements",
+    "Infinite Scroll"
+  ],
+  advanced: [
+    "CSS Animations",
+    "GSAP Animations"
+  ]
+};
+
+const animationOptions = Object.values(animationCategories).flat();
 
 const ProjectCreationWizard = ({ onCreateProject, isCreating }: ProjectCreationWizardProps) => {
   const navigate = useNavigate();
@@ -621,14 +637,23 @@ const ProjectCreationWizard = ({ onCreateProject, isCreating }: ProjectCreationW
                 {selectedAnimations.length === animationOptions.length ? "Deselect All" : "Select All"}
               </Button>
             </div>
-            <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto">
-              {animationOptions.map((animation) => (
-                <AnimationItem
-                  key={animation}
-                  animation={animation}
-                  isSelected={selectedAnimations.includes(animation)}
-                  onToggle={() => handleAnimationToggle(animation)}
-                />
+            <div className="space-y-4 max-h-64 overflow-y-auto">
+              {Object.entries(animationCategories).map(([category, animations]) => (
+                <div key={category} className="space-y-2">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {animations.map((animation) => (
+                      <AnimationItem
+                        key={animation}
+                        animation={animation}
+                        isSelected={selectedAnimations.includes(animation)}
+                        onToggle={() => handleAnimationToggle(animation)}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
             {selectedAnimations.length > 0 && (
