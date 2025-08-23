@@ -104,26 +104,26 @@ const AIChat = ({ projectId, onCodeUpdate, projectContent }: AIChatProps) => {
 
       if (error) throw error;
 
+      // AI responds with simple confirmation - no code shown
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'ai',
-        content: data.response,
+        content: data.codeChanges && data.codeChanges.length > 0 
+          ? `Changes applied successfully. ${data.codeChanges.length} file(s) updated. Preview refreshed.`
+          : data.response,
         timestamp: new Date(),
-        codeChanges: data.codeChanges,
       };
 
       setMessages(prev => [...prev, aiMessage]);
 
-      // Apply code changes with progress indication
+      // Apply code changes silently
       if (data.codeChanges && data.codeChanges.length > 0) {
         setGeneratingFiles(data.codeChanges.map((change: any) => change.file));
         
         for (let i = 0; i < data.codeChanges.length; i++) {
           const change = data.codeChanges[i];
           
-          // Simulate generation delay for better UX
-          await new Promise(resolve => setTimeout(resolve, 300 + i * 200));
-          
+          // Apply changes directly without delay
           onCodeUpdate(change.file, change.content);
           
           // Update generating files to show progress
@@ -131,8 +131,8 @@ const AIChat = ({ projectId, onCodeUpdate, projectContent }: AIChatProps) => {
         }
         
         toast({
-          title: "Code Updated",
-          description: `Generated ${data.codeChanges.length} file(s) successfully!`,
+          title: "Changes Applied",
+          description: `Updated ${data.codeChanges.length} file(s). Preview refreshed.`,
         });
       }
 

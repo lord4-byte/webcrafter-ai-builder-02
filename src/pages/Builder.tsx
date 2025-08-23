@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -11,6 +11,7 @@ import PreviewFrame from "@/components/builder/PreviewFrame";
 import AIChat from "@/components/builder/AIChat";
 import PublishButton from "@/components/integrations/PublishButton";
 import FileExplorer from "@/components/builder/FileExplorer";
+import EnhancedPreviewFrame from "@/components/builder/EnhancedPreviewFrame";
 
 interface ProjectData {
   id: string;
@@ -23,6 +24,7 @@ interface ProjectData {
 const Builder = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [project, setProject] = useState<ProjectData | null>(null);
   const [activeTab, setActiveTab] = useState("html");
@@ -42,8 +44,15 @@ const Builder = () => {
   useEffect(() => {
     if (projectId) {
       fetchProject();
+      
+      // Check if this is a new project that needs generation
+      const state = location.state as any;
+      if (state?.isNewProject && state?.projectConfig) {
+        setIsGenerating(true);
+        generateProject(state.projectConfig);
+      }
     }
-  }, [projectId]);
+  }, [projectId, location.state]);
 
   // Auto-refresh preview when project content changes
   useEffect(() => {
@@ -88,6 +97,105 @@ const Builder = () => {
         variant: "destructive",
       });
       navigate("/dashboard");
+    }
+  };
+
+  const generateProject = async (config: any) => {
+    try {
+      setGenerationProgress({
+        current: 1,
+        total: 10,
+        currentFile: "Initializing AI generation..."
+      });
+
+      // Get API keys
+      const savedKeys = localStorage.getItem('webcrafter_api_keys');
+      const savedModels = localStorage.getItem('webcrafter_selected_models');
+      const apiKeys = savedKeys ? JSON.parse(savedKeys) : {};
+      const selectedModels = savedModels ? JSON.parse(savedModels) : {};
+
+      const configWithKeys = {
+        ...config,
+        apiKeys,
+        selectedModels
+      };
+
+      setGenerationProgress(prev => prev ? {
+        ...prev,
+        current: 2,
+        currentFile: "Connecting to AI model..."
+      } : null);
+
+      // Generate project with AI
+      const { data: aiData, error: aiError } = await supabase.functions.invoke('ai-project-generator', {
+        body: configWithKeys
+      });
+
+      if (aiError) throw aiError;
+
+      if (!aiData.files || Object.keys(aiData.files).length === 0) {
+        throw new Error("AI failed to generate project files");
+      }
+
+      // Simulate file generation progress
+      const files = Object.keys(aiData.files);
+      for (let i = 0; i < files.length; i++) {
+        setGenerationProgress({
+          current: i + 3,
+          total: files.length + 5,
+          currentFile: `Writing file: ${files[i]}`
+        });
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      setGenerationProgress({
+        current: files.length + 4,
+        total: files.length + 5,
+        currentFile: "Finalizing project..."
+      });
+
+      // Update project with generated content
+      const { error: updateError } = await supabase
+        .from("projects")
+        .update({
+          content: JSON.stringify(aiData.files),
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", projectId);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setProject(prev => prev ? {
+        ...prev,
+        content: aiData.files
+      } : null);
+
+      setAvailableFiles(Object.keys(aiData.files));
+
+      setGenerationProgress({
+        current: files.length + 5,
+        total: files.length + 5,
+        currentFile: "Project ready!"
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      toast({
+        title: "Project Generated!",
+        description: `Your AI-generated project is ready with ${files.length} files!`,
+      });
+
+    } catch (error) {
+      console.error('Error generating project:', error);
+      toast({
+        title: "Generation Error",
+        description: "Failed to generate project. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+      setGenerationProgress(null);
     }
   };
 
@@ -245,10 +353,10 @@ Generated on: ${new Date().toLocaleDateString()}
             <Button 
               variant="ghost" 
               size="sm"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/create")}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
+              Back to Project Config
             </Button>
             <h1 className="font-semibold text-lg">{project.name}</h1>
           </div>
@@ -274,13 +382,7 @@ Generated on: ${new Date().toLocaleDateString()}
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => {
-                setShowCodeArea(!showCodeArea);
-                // Auto-refresh preview when toggling
-                setTimeout(() => {
-                  setActiveTab(prev => prev);
-                }, 100);
-              }}
+              onClick={() => setShowCodeArea(!showCodeArea)}
             >
               <Code2 className="w-4 h-4 mr-2" />
               {showCodeArea ? "Preview" : "Code"}
@@ -368,14 +470,11 @@ Generated on: ${new Date().toLocaleDateString()}
             </>
           ) : (
             <ResizablePanel defaultSize={showChat ? 75 : 100}>
-              <PreviewFrame 
-                html={project.content.html || project.content['index.html'] || ''}
-                css={project.content.css || project.content['styles.css'] || ''}
-                js={project.content.js || project.content['script.js'] || ''}
+              <EnhancedPreviewFrame 
+                projectContent={project.content}
                 isGenerating={isGenerating}
                 generationProgress={generationProgress}
                 projectFiles={availableFiles}
-                projectContent={project.content}
               />
             </ResizablePanel>
           )}

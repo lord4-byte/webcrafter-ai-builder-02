@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, FileText, Settings, Eye, Code, Download, Home } from "lucide-react";
+import { Plus, FileText, Settings, Eye, Code, Download, Home, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -97,6 +97,32 @@ const Dashboard = () => {
 
   const openBuilder = (projectId: string) => {
     navigate(`/builder/${projectId}`);
+  };
+
+  const deleteProject = async (projectId: string, projectName: string) => {
+    const confirmed = window.confirm(`Are you sure you want to delete "${projectName}"? This action cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from("projects")
+        .delete()
+        .eq("id", projectId);
+
+      if (error) throw error;
+
+      setProjects(projects.filter(p => p.id !== projectId));
+      toast({
+        title: "Project Deleted",
+        description: `"${projectName}" has been permanently deleted.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete project. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -205,6 +231,16 @@ const Dashboard = () => {
                         onClick={() => navigate(`/preview/${project.id}`)}
                       >
                         <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteProject(project.id, project.name);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </CardContent>

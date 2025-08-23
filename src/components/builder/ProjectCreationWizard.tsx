@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Wand2, Palette, Code, FileText, Sparkles, AlertCircle, Settings, Upload, X } from "lucide-react";
+import { Wand2, Palette, Code, FileText, Sparkles, AlertCircle, Settings, Upload, X, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import AnimationItem from "./AnimationItem";
 
 interface ProjectCreationWizardProps {
@@ -311,6 +312,18 @@ const ProjectCreationWizard = ({ onCreateProject, isCreating }: ProjectCreationW
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8">
+      <div className="flex items-center mb-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate("/dashboard")}
+          className="mr-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Projects
+        </Button>
+      </div>
+      
       <div className="text-center space-y-4">
         <div className="flex items-center justify-center gap-2">
           <Wand2 className="w-8 h-8 text-primary" />

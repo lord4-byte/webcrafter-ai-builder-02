@@ -9,12 +9,13 @@ const CreateProject = () => {
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
 
-  // Navigate to builder with real-time generation
-  const navigateToBuilder = (projectId: string) => {
+  // Navigate to builder immediately with real-time generation
+  const navigateToBuilder = (projectId: string, config: ProjectConfig) => {
     navigate(`/builder/${projectId}`, { 
       state: { 
         isNewProject: true,
-        showGenerationProgress: true 
+        showGenerationProgress: true,
+        projectConfig: config
       }
     });
   };
@@ -64,30 +65,17 @@ const CreateProject = () => {
       const savedModels = localStorage.getItem('webcrafter_selected_models');
       const selectedModels = savedModels ? JSON.parse(savedModels) : {};
 
-      const configWithKeys = {
-        ...config,
-        apiKeys,
-        selectedModels
-      };
-
-      // Generate project with AI
-      const { data: aiData, error: aiError } = await supabase.functions.invoke('ai-project-generator', {
-        body: configWithKeys
-      });
-
-      if (aiError) throw aiError;
-
-      if (!aiData.files || Object.keys(aiData.files).length === 0) {
-        throw new Error("AI failed to generate project files");
-      }
-
-      // Create project in database
+      // Create project in database first with minimal content
       const { data: project, error: dbError } = await supabase
         .from("projects")
         .insert({
           name: config.title,
           description: config.description,
-          content: aiData.files,
+          content: {
+            "index.html": "<!-- Generating your project... -->",
+            "styles.css": "/* AI is creating your styles... */",
+            "script.js": "// Your JavaScript code is being generated..."
+          },
           user_id: user.id,
         })
         .select()
@@ -96,16 +84,11 @@ const CreateProject = () => {
       if (dbError) throw dbError;
       if (!project) throw new Error('Failed to create project');
 
-      toast({
-        title: "Project Created!",
-        description: `Your AI-generated project "${config.title}" is ready!`,
-      });
-
       // Clear saved prompt data after successful creation
       localStorage.removeItem('webcrafter_saved_prompt');
       
-      // Navigate to the builder with live generation view
-      navigateToBuilder(project.id);
+      // Immediately navigate to the builder with generation state
+      navigateToBuilder(project.id, config);
 
     } catch (error) {
       console.error('Error creating project:', error);
