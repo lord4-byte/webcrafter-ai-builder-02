@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { title, description, outputFormat, colorTheme, template, animations, specialRequests, apiKeys } = await req.json();
+    const { title, description, outputFormat, colorTheme, template, animations, specialRequests, apiKeys, generatePlanOnly } = await req.json();
 
     // Determine the best framework based on the project description - DEFAULT TO REACT
     const determineFramework = (description: string, template: string, specialRequests: string): string => {
@@ -137,7 +137,43 @@ serve(async (req) => {
       themeColors = colorThemeMapping[colorTheme as keyof typeof colorThemeMapping] || colorThemeMapping.blue;
     }
 
-    const systemPrompt = `You are an expert full-stack developer and AI agent who creates complete, production-ready applications exactly like Lovable.dev. You MUST generate fully functional, deployable projects with NO placeholders, NO mockups, and REAL implementations.
+    let systemPrompt;
+    
+    if (generatePlanOnly) {
+      systemPrompt = `You are an expert project planner and architect. Create a detailed implementation plan for the following web application:
+
+🎯 PROJECT SPECIFICATION:
+- Title: ${title}
+- Description: ${description}
+- Framework: ${framework} (${formatInstructions[framework as keyof typeof formatInstructions] || 'React with TypeScript'})
+- Color Theme: ${JSON.stringify(themeColors)}
+- Template Base: ${template || 'Custom Build'}
+- Animations: ${animations.join(', ') || 'Smooth Transitions'}
+- Special Requests: ${specialRequests || 'None'}
+
+Create a comprehensive project plan including:
+1. Project overview and goals
+2. Complete architecture with folder structure and key files
+3. All features and functionalities to implement
+4. Required dependencies and libraries
+5. Integration of selected animations/effects
+6. Technology stack breakdown
+7. Step-by-step implementation approach
+
+Respond with valid JSON: {
+  "overview": "detailed project overview and goals",
+  "architecture": {
+    "folder_structure": ["src/", "src/components/", "src/pages/", "public/"],
+    "key_files": ["App.tsx", "index.html", "package.json", "README.md"]
+  },
+  "features": ["feature 1", "feature 2", "feature 3"],
+  "dependencies": ["react", "tailwindcss", "react-router-dom"],
+  "animations": ["fade transitions", "parallax scrolling"],
+  "tech_stack": ["React", "TypeScript", "Tailwind CSS"],
+  "implementation_steps": ["step 1", "step 2", "step 3"]
+}`;
+    } else {
+      systemPrompt = `You are an expert full-stack developer and AI agent who creates complete, production-ready applications exactly like Lovable.dev. You MUST generate fully functional, deployable projects with NO placeholders, NO mockups, and REAL implementations.
 
 🎯 PROJECT SPECIFICATION:
 - Title: ${title}
@@ -219,6 +255,7 @@ IMPORTANT:
 - Create a project that can be immediately deployed and used
 
 Generate a comprehensive, professional application that exceeds expectations and provides real value.`;
+    }
 
     let requestBody: any;
     

@@ -3,11 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import ProjectCreationWizard, { ProjectConfig } from "@/components/builder/ProjectCreationWizard";
+import ProjectPlanReview from "@/components/builder/ProjectPlanReview";
 
 const CreateProject = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isCreating, setIsCreating] = useState(false);
+  const [showPlanReview, setShowPlanReview] = useState(false);
+  const [projectConfig, setProjectConfig] = useState<ProjectConfig | null>(null);
+  const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
 
   // Navigate to builder immediately with real-time generation
   const navigateToBuilder = (projectId: string, config: ProjectConfig) => {
@@ -61,10 +65,6 @@ const CreateProject = () => {
         return;
       }
 
-      // Add selected models to the config
-      const savedModels = localStorage.getItem('webcrafter_selected_models');
-      const selectedModels = savedModels ? JSON.parse(savedModels) : {};
-
       // Create project in database first with minimal content
       const { data: project, error: dbError } = await supabase
         .from("projects")
@@ -87,8 +87,10 @@ const CreateProject = () => {
       // Clear saved prompt data after successful creation
       localStorage.removeItem('webcrafter_saved_prompt');
       
-      // Immediately navigate to the builder with generation state
-      navigateToBuilder(project.id, config);
+      // Store config and project ID, then show plan review
+      setProjectConfig(config);
+      setCreatedProjectId(project.id);
+      setShowPlanReview(true);
 
     } catch (error) {
       console.error('Error creating project:', error);
@@ -102,6 +104,44 @@ const CreateProject = () => {
       setIsCreating(false);
     }
   };
+
+  const handleProceedToBuild = () => {
+    if (createdProjectId && projectConfig) {
+      navigateToBuilder(createdProjectId, projectConfig);
+    }
+  };
+
+  const handleBackToConfig = () => {
+    setShowPlanReview(false);
+    setProjectConfig(null);
+    setCreatedProjectId(null);
+  };
+
+  if (showPlanReview && projectConfig && createdProjectId) {
+    return (
+      <div className="min-h-screen relative overflow-hidden">
+        {/* Spline Background - 60% Visible */}
+        <div className="fixed inset-0 z-0">
+          <iframe 
+            src='https://my.spline.design/orbittriangle-3S6GOic3EjNFF8CrhyvHizYQ/' 
+            frameBorder='0' 
+            width='100%' 
+            height='100%'
+            className="pointer-events-none scale-105 opacity-60"
+          />
+        </div>
+        
+        <div className="relative z-10 min-h-screen bg-background/40">
+          <ProjectPlanReview
+            config={projectConfig}
+            projectId={createdProjectId}
+            onProceed={handleProceedToBuild}
+            onBack={handleBackToConfig}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden">

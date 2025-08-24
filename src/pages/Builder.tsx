@@ -353,10 +353,10 @@ Generated on: ${new Date().toLocaleDateString()}
             <Button 
               variant="ghost" 
               size="sm"
-              onClick={() => navigate("/create")}
+              onClick={() => navigate("/dashboard")}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Project Config
+              Back to Dashboard
             </Button>
             <h1 className="font-semibold text-lg">{project.name}</h1>
           </div>
