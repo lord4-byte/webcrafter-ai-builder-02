@@ -420,8 +420,11 @@ const ProjectCreationWizard = ({ onCreateProject, isCreating }: ProjectCreationW
     onCreateProject(config);
   };
 
-  // Enhanced validation - if we have uploaded prompt, we're good to go
-  const isValid = hasApiKey && ((uploadedPrompt && description.trim().length > 50) || (title && colorTheme && description && description.length > 20));
+  // Enhanced validation - treat uploaded prompt as complete project spec
+  const isValid = hasApiKey && (
+    (uploadedPrompt && uploadedPrompt.trim().length > 100) || // Uploaded full prompt is sufficient
+    (title && colorTheme && description && description.length > 20) // Traditional form validation
+  );
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8">

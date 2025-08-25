@@ -505,7 +505,36 @@ Return a detailed enhanced description that an AI can use to build a production-
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-muted-foreground leading-relaxed">{plan.overview}</p>
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Project Summary
+                    </h4>
+                    <div className="text-sm space-y-2">
+                      {plan.overview.split('.').filter(sentence => sentence.trim()).slice(0, 4).map((point, index) => (
+                        <div key={index} className="flex items-start gap-2">
+                          <CheckCircle className="w-3 h-3 text-primary mt-1 flex-shrink-0" />
+                          <span className="text-muted-foreground">{point.trim()}.</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <FileCode2 className="w-4 h-4" />
+                      Generated Files ({plan.architecture.key_files.length} total)
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-1 text-xs">
+                      {plan.architecture.key_files.map((file, index) => (
+                        <Badge key={index} variant="outline" className="font-mono text-xs">
+                          {file.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <h4 className="font-semibold mb-2 flex items-center gap-2">
