@@ -28,19 +28,47 @@ interface AIChatProps {
 }
 
 const AIChat = ({ projectId, onCodeUpdate, projectContent }: AIChatProps) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      type: 'ai',
-      content: 'Hello! I\'m your AI assistant. I can help you enhance your project, fix errors, or add new features. Just describe what you need in natural language!',
-      timestamp: new Date(),
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [generatingFiles, setGeneratingFiles] = useState<string[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Load persisted conversation for this project
+  useEffect(() => {
+    const key = `webcrafter_chat_${projectId}`;
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setMessages(parsed.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) })));
+      } catch (e) {
+        console.warn('Failed to parse stored chat history');
+        setMessages([{
+          id: '1',
+          type: 'ai',
+          content: "Hello! I'm your AI assistant. I remember prior context and will modify your project directly.",
+          timestamp: new Date(),
+        }]);
+      }
+    } else {
+      setMessages([{
+        id: '1',
+        type: 'ai',
+        content: "Hello! I'm your AI assistant. I remember prior context and will modify your project directly.",
+        timestamp: new Date(),
+      }]);
+    }
+  }, [projectId]);
+
+  // Persist conversation on change
+  useEffect(() => {
+    if (!projectId || messages.length === 0) return;
+    const key = `webcrafter_chat_${projectId}`;
+    const serializable = messages.map(m => ({ ...m, timestamp: m.timestamp.toISOString() }));
+    localStorage.setItem(key, JSON.stringify(serializable));
+  }, [messages, projectId]);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -89,20 +117,33 @@ const AIChat = ({ projectId, onCodeUpdate, projectContent }: AIChatProps) => {
     setGeneratingFiles([]);
 
     try {
-      const { data, error } = await supabase.functions.invoke('ai-code-assistant', {
-        body: {
-          message: inputMessage,
-          projectContent,
-          projectId,
-          conversationHistory: messages.slice(-5),
-          apiKeys: {
-            ...apiKeys,
-            selectedModels
+      // Prepare extended history (last 50 messages)
+      const extendedHistory = messages.slice(-50);
+
+      const invoke = async () =>
+        supabase.functions.invoke('ai-code-assistant', {
+          body: {
+            message: inputMessage,
+            projectContent,
+            projectId,
+            conversationHistory: extendedHistory,
+            apiKeys: {
+              ...apiKeys,
+              selectedModels
+            }
           }
-        }
-      });
+        });
+
+      // Attempt with single retry
+      let { data, error } = await invoke();
+      if (error) {
+        // small backoff
+        await new Promise(r => setTimeout(r, 800));
+        ({ data, error } = await invoke());
+      }
 
       if (error) throw error;
+
 
       // AI responds with simple confirmation - no code shown
       const aiMessage: Message = {
