@@ -40,7 +40,7 @@ const HeaderWithSettings = ({
     navigate('/');
   };
   if (isAuthenticated) {
-    return <header className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-md border-b border-border">
+    return <header className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-md border-b border-border" style={{ position: 'fixed', top: 0 }}>
         <div className="container px-[22px] my-0 mx-0 py-0">
           <div className="flex items-center justify-between px-0 py-[10px]">
             {/* Logo and Back Button */}
