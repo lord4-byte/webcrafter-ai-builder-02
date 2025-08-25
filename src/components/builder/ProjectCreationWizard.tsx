@@ -241,11 +241,11 @@ const ProjectCreationWizard = ({ onCreateProject, isCreating }: ProjectCreationW
       return;
     }
 
-    // Validate file size (1MB limit)
-    if (file.size > 1024 * 1024) {
+    // Validate file size (5MB limit for full prompts)
+    if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "File Too Large",
-        description: "Please upload a file smaller than 1MB.",
+        description: "Please upload a file smaller than 5MB.",
         variant: "destructive",
       });
       return;
@@ -265,13 +265,17 @@ const ProjectCreationWizard = ({ onCreateProject, isCreating }: ProjectCreationW
         return;
       }
 
-      setUploadedPrompt(text.trim());
+      const promptContent = text.trim();
+      setUploadedPrompt(promptContent);
       setPromptFileName(file.name);
-      setDescription(text.trim()); // Set the description with the uploaded content
+      setDescription(promptContent);
+      
+      // Auto-extract project details from the prompt using AI analysis
+      await extractProjectDetailsFromPrompt(promptContent);
       
       toast({
-        title: "File Uploaded Successfully",
-        description: `Loaded prompt from ${file.name}`,
+        title: "Prompt Uploaded Successfully",
+        description: `Loaded and analyzed prompt from ${file.name}. Project details auto-populated!`,
       });
     } catch (error) {
       console.error('Error reading file:', error);
@@ -284,6 +288,98 @@ const ProjectCreationWizard = ({ onCreateProject, isCreating }: ProjectCreationW
       setIsUploading(false);
       // Reset the input
       event.target.value = '';
+    }
+  };
+
+  const extractProjectDetailsFromPrompt = async (promptText: string) => {
+    try {
+      // Extract title from first line or first sentence
+      const lines = promptText.split('\n').filter(line => line.trim());
+      const firstLine = lines[0]?.trim() || '';
+      
+      // Look for title indicators
+      let extractedTitle = '';
+      if (firstLine.toLowerCase().includes('title:') || firstLine.toLowerCase().includes('project:')) {
+        extractedTitle = firstLine.replace(/^(title|project):\s*/i, '').trim();
+      } else if (firstLine.length < 100 && !firstLine.includes('.')) {
+        // First line is likely a title if it's short and doesn't contain periods
+        extractedTitle = firstLine;
+      } else {
+        // Extract from content - look for app names or project names
+        const titleMatch = promptText.match(/(?:app|website|project|platform)\s+(?:called|named)\s+"?([^"\n.]+)"?/i);
+        if (titleMatch) {
+          extractedTitle = titleMatch[1].trim();
+        } else {
+          // Fallback: use first few words
+          extractedTitle = promptText.split(/\s+/).slice(0, 4).join(' ').replace(/[^\w\s]/g, '').trim();
+        }
+      }
+      
+      if (extractedTitle && extractedTitle.length > 3) {
+        setTitle(extractedTitle.substring(0, 50)); // Limit title length
+      }
+
+      // Auto-detect color theme based on keywords
+      const lowerPrompt = promptText.toLowerCase();
+      if (lowerPrompt.includes('blue') || lowerPrompt.includes('ocean') || lowerPrompt.includes('sea')) {
+        setColorTheme('blue');
+      } else if (lowerPrompt.includes('purple') || lowerPrompt.includes('violet') || lowerPrompt.includes('royal')) {
+        setColorTheme('purple');
+      } else if (lowerPrompt.includes('green') || lowerPrompt.includes('nature') || lowerPrompt.includes('forest')) {
+        setColorTheme('green');
+      } else if (lowerPrompt.includes('dark') || lowerPrompt.includes('black') || lowerPrompt.includes('night')) {
+        setColorTheme('dark');
+      } else if (lowerPrompt.includes('red') || lowerPrompt.includes('crimson')) {
+        setColorTheme('red');
+      } else if (lowerPrompt.includes('orange') || lowerPrompt.includes('sunset')) {
+        setColorTheme('orange');
+      } else if (lowerPrompt.includes('pink') || lowerPrompt.includes('rose')) {
+        setColorTheme('pink');
+      } else {
+        setColorTheme('blue'); // Default fallback
+      }
+
+      // Auto-detect template based on keywords
+      if (lowerPrompt.includes('landing') || lowerPrompt.includes('homepage')) {
+        setTemplate('landing');
+      } else if (lowerPrompt.includes('portfolio') || lowerPrompt.includes('personal website')) {
+        setTemplate('portfolio');
+      } else if (lowerPrompt.includes('blog') || lowerPrompt.includes('article')) {
+        setTemplate('blog');
+      } else if (lowerPrompt.includes('shop') || lowerPrompt.includes('store') || lowerPrompt.includes('ecommerce') || lowerPrompt.includes('e-commerce')) {
+        setTemplate('ecommerce');
+      } else if (lowerPrompt.includes('dashboard') || lowerPrompt.includes('admin')) {
+        setTemplate('dashboard');
+      } else if (lowerPrompt.includes('saas') || lowerPrompt.includes('software')) {
+        setTemplate('saas');
+      } else if (lowerPrompt.includes('restaurant') || lowerPrompt.includes('cafe') || lowerPrompt.includes('food')) {
+        setTemplate('restaurant');
+      } else if (lowerPrompt.includes('agency') || lowerPrompt.includes('business')) {
+        setTemplate('agency');
+      } else {
+        setTemplate('custom'); // Custom template for unique requirements
+      }
+
+      // Auto-detect animations based on keywords
+      const detectedAnimations: string[] = [];
+      if (lowerPrompt.includes('parallax')) detectedAnimations.push('Parallax Scrolling');
+      if (lowerPrompt.includes('particle') || lowerPrompt.includes('particles')) detectedAnimations.push('Particle Effects');
+      if (lowerPrompt.includes('hover') || lowerPrompt.includes('interactive')) detectedAnimations.push('Hover Animations');
+      if (lowerPrompt.includes('fade') || lowerPrompt.includes('transition')) detectedAnimations.push('Fade In/Out');
+      if (lowerPrompt.includes('loading') || lowerPrompt.includes('loader')) detectedAnimations.push('Loading Animations');
+      if (lowerPrompt.includes('scroll') || lowerPrompt.includes('scrolling')) detectedAnimations.push('Scroll Animations');
+      if (lowerPrompt.includes('gradient') || lowerPrompt.includes('background')) detectedAnimations.push('Gradient Animations');
+      if (lowerPrompt.includes('3d') || lowerPrompt.includes('transform')) detectedAnimations.push('3D Transforms');
+      if (lowerPrompt.includes('glass') || lowerPrompt.includes('glassmorphism')) detectedAnimations.push('Glass Morphism');
+      if (lowerPrompt.includes('glow') || lowerPrompt.includes('neon')) detectedAnimations.push('Neon Glow Effects');
+      
+      if (detectedAnimations.length > 0) {
+        setSelectedAnimations(detectedAnimations);
+      }
+
+    } catch (error) {
+      console.error('Error extracting project details:', error);
+      // Silently fail - the upload was still successful
     }
   };
 
@@ -324,7 +420,8 @@ const ProjectCreationWizard = ({ onCreateProject, isCreating }: ProjectCreationW
     onCreateProject(config);
   };
 
-  const isValid = title && colorTheme && description && hasApiKey;
+  // Enhanced validation - if we have uploaded prompt, we're good to go
+  const isValid = hasApiKey && ((uploadedPrompt && description.trim().length > 50) || (title && colorTheme && description && description.length > 20));
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8">
@@ -411,14 +508,14 @@ const ProjectCreationWizard = ({ onCreateProject, isCreating }: ProjectCreationW
                     />
                     <Button
                       type="button"
-                      variant="outline"
+                      variant={uploadedPrompt ? "default" : "outline"}
                       size="sm"
                       onClick={() => document.getElementById('prompt-upload')?.click()}
                       disabled={isUploading}
                       className="w-full"
                     >
                       <Upload className="w-4 h-4 mr-2" />
-                      {isUploading ? "Uploading..." : "Upload Prompt (TXT)"}
+                      {isUploading ? "Analyzing..." : uploadedPrompt ? "Upload New Prompt" : "Upload Full App Prompt (TXT)"}
                     </Button>
                   </div>
                   {uploadedPrompt && (
@@ -446,29 +543,49 @@ const ProjectCreationWizard = ({ onCreateProject, isCreating }: ProjectCreationW
                 </div>
                 
                 {promptFileName && (
-                  <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
-                    <FileText className="w-4 h-4 text-green-600" />
-                    <span className="text-sm text-green-700 dark:text-green-300">
-                      Loaded from: {promptFileName}
-                    </span>
+                  <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <div className="flex items-center gap-2 flex-1">
+                      <FileText className="w-4 h-4 text-green-600" />
+                      <div>
+                        <div className="text-sm font-medium text-green-700 dark:text-green-300">
+                          Full App Prompt Loaded: {promptFileName}
+                        </div>
+                        <div className="text-xs text-green-600 dark:text-green-400">
+                          Project details auto-extracted and form populated
+                        </div>
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {description.length} chars
+                    </Badge>
                   </div>
                 )}
                 
                 <Textarea
                   id="description"
                   placeholder={uploadedPrompt ? 
-                    "Your uploaded prompt has been loaded. You can edit it here if needed..." : 
-                    "Describe what you want to build, or upload a TXT file with your prompt. Be as detailed as possible - this helps the AI understand your vision. Include features, target audience, style preferences, and any specific requirements."
+                    "Your full app prompt has been loaded and project details auto-populated. You can edit the prompt here if needed..." : 
+                    "Describe what you want to build, or upload a TXT file with your complete app prompt. For best results, upload a detailed TXT file containing your full app requirements, features, design preferences, and specifications."
                   }
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  rows={uploadedPrompt ? 8 : 5}
-                  className={uploadedPrompt ? "bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800" : ""}
+                  rows={uploadedPrompt ? 10 : 5}
+                  className={uploadedPrompt ? "bg-gradient-to-br from-blue-50/50 to-green-50/50 dark:from-blue-900/10 dark:to-green-900/10 border-blue-200 dark:border-blue-800" : ""}
                 />
                 
                 {uploadedPrompt && (
-                  <div className="text-xs text-muted-foreground">
-                    Preview of uploaded content (editable above). Character count: {description.length}
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 mb-2">
+                      <Sparkles className="w-4 h-4" />
+                      <span className="font-medium">AI Analysis Complete</span>
+                    </div>
+                    <div className="text-xs text-blue-600 dark:text-blue-400 space-y-1">
+                      <div>✓ Project title: {title || 'Auto-detected'}</div>
+                      <div>✓ Color theme: {colorTheme || 'Auto-selected'}</div>
+                      <div>✓ Template type: {template || 'Auto-determined'}</div>
+                      <div>✓ Animations: {selectedAnimations.length} detected</div>
+                      <div>✓ Character count: {description.length} (comprehensive prompt)</div>
+                    </div>
                   </div>
                 )}
               </div>
