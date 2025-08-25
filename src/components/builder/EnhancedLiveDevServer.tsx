@@ -75,6 +75,7 @@ const EnhancedLiveDevServer = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [autoFixEnabled, setAutoFixEnabled] = useState(true);
   const [viewportMode, setViewportMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [showConsole, setShowConsole] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { toast } = useToast();
 
@@ -99,14 +100,14 @@ const EnhancedLiveDevServer = ({
     }
   }, [projectContent, isRunning]);
 
-  // Background analysis and auto-fixing
-  useEffect(() => {
-    if (isRunning && autoFixEnabled) {
-      const interval = setInterval(() => {
-        analyzeAndAutoFix();
-      }, 10000); // Analyze every 10 seconds
-      return () => clearInterval(interval);
-    }
+   // Background analysis and auto-fixing (more frequent for real-time fixes)
+   useEffect(() => {
+     if (isRunning && autoFixEnabled) {
+       const interval = setInterval(() => {
+         analyzeAndAutoFix();
+       }, 5000); // Analyze every 5 seconds for faster response
+       return () => clearInterval(interval);
+     }
   }, [isRunning, autoFixEnabled, projectContent]);
 
   const startDevServer = async () => {
@@ -503,16 +504,25 @@ Focus on actionable improvements that can be automatically implemented.`;
         return;
       }
 
-      if (analysis.suggestions && analysis.suggestions.length > 0) {
-        setAutoFixSuggestions(analysis.suggestions);
-        addLog('info', `Found ${analysis.suggestions.length} optimization suggestions`, 'ai-agent');
-        
-        // Auto-fix low severity issues if enabled
-        const lowSeverityIssues = analysis.suggestions.filter((s: AutoFixSuggestion) => s.severity === 'low');
-        if (lowSeverityIssues.length > 0 && onCodeUpdate) {
-          addLog('info', `Auto-fixing ${lowSeverityIssues.length} low-severity issues...`, 'ai-agent');
-          // Implementation for auto-fixing would go here
-        }
+       if (analysis.suggestions && analysis.suggestions.length > 0) {
+         setAutoFixSuggestions(analysis.suggestions);
+         addLog('info', `Found ${analysis.suggestions.length} optimization suggestions`, 'ai-agent');
+         
+         // Auto-fix critical errors immediately  
+         const criticalIssues = analysis.suggestions.filter((s: AutoFixSuggestion) => 
+           s.severity === 'high' && s.issue.toLowerCase().includes('error')
+         );
+         if (criticalIssues.length > 0 && onCodeUpdate) {
+           addLog('info', `Auto-fixing ${criticalIssues.length} critical errors...`, 'ai-agent');
+           await autoFixIssues(criticalIssues);
+         }
+         
+         // Auto-fix low severity issues if enabled
+         const lowSeverityIssues = analysis.suggestions.filter((s: AutoFixSuggestion) => s.severity === 'low');
+         if (lowSeverityIssues.length > 0 && onCodeUpdate) {
+           addLog('info', `Auto-fixing ${lowSeverityIssues.length} low-severity issues...`, 'ai-agent');
+           await autoFixIssues(lowSeverityIssues);
+         }
       } else {
         addLog('success', 'No issues found - code looks good!', 'ai-agent');
       }
@@ -522,7 +532,79 @@ Focus on actionable improvements that can be automatically implemented.`;
     } finally {
       setIsAnalyzing(false);
     }
-  };
+   };
+
+   const autoFixIssues = async (issues: AutoFixSuggestion[]) => {
+     if (!onCodeUpdate) return;
+     
+     for (const issue of issues) {
+       try {
+         addLog('info', `Fixing: ${issue.issue}`, 'ai-agent');
+         
+         // Get API keys for AI-powered fixing
+         const savedKeys = localStorage.getItem('webcrafter_api_keys');
+         const savedModels = localStorage.getItem('webcrafter_selected_models');
+         const apiKeys = savedKeys ? JSON.parse(savedKeys) : {};
+         const selectedModels = savedModels ? JSON.parse(savedModels) : {};
+
+         const fixPrompt = `Fix this specific issue in the code:
+
+Issue: ${issue.issue}
+Suggested Fix: ${issue.fix}
+Affected Files: ${issue.affectedFiles.join(', ')}
+
+Current code for affected files:
+${issue.affectedFiles.map(file => 
+   `=== ${file} ===\n${projectContent[file] || 'File not found'}\n`
+ ).join('\n')}
+
+Return only the fixed code for each file in JSON format:
+{
+  "files": {
+    "filename1": "fixed content",
+    "filename2": "fixed content"
+  }
+}
+
+Make minimal changes to fix only the specific issue mentioned.`;
+
+         const { data, error } = await supabase.functions.invoke('ai-code-assistant', {
+           body: {
+             message: fixPrompt,
+             projectContent,
+             projectId,
+             conversationHistory: [],
+             apiKeys: {
+               ...apiKeys,
+               selectedModels
+             }
+           }
+         });
+
+         if (error) throw error;
+
+         let fixedCode;
+         try {
+           fixedCode = JSON.parse(data.response || data.content || '{}');
+         } catch (e) {
+           addLog('warn', `Failed to parse AI fix for: ${issue.issue}`, 'ai-agent');
+           continue;
+         }
+
+         if (fixedCode.files) {
+           for (const [filename, content] of Object.entries(fixedCode.files)) {
+             if (typeof content === 'string') {
+               onCodeUpdate(filename, content);
+               addLog('success', `Fixed ${filename}`, 'ai-agent');
+             }
+           }
+         }
+
+       } catch (error) {
+         addLog('error', `Failed to auto-fix: ${issue.issue}`, 'ai-agent');
+       }
+     }
+   };
 
   const refreshServer = useCallback(() => {
     if (devUrl) {
@@ -552,13 +634,13 @@ Focus on actionable improvements that can be automatically implemented.`;
     addLog('info', 'Development server stopped', 'system');
   };
 
-  const getViewportSize = () => {
-    switch (viewportMode) {
-      case 'mobile': return { width: '375px', height: '667px' };
-      case 'tablet': return { width: '768px', height: '1024px' };
-      default: return { width: '100%', height: '100%' };
-    }
-  };
+   const getViewportSize = () => {
+     switch (viewportMode) {
+       case 'mobile': return { width: '375px', height: '667px', maxWidth: '375px', maxHeight: '667px' };
+       case 'tablet': return { width: '768px', height: '1024px', maxWidth: '768px', maxHeight: '80vh' };
+       default: return { width: '100%', height: '100%', maxWidth: '100%', maxHeight: '100%' };
+     }
+   };
 
   useEffect(() => {
     if (isVisible && !isRunning && !isStarting) {
@@ -574,23 +656,31 @@ Focus on actionable improvements that can be automatically implemented.`;
     };
   }, [devUrl]);
 
-  // Listen for messages from iframe
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data.type === 'runtime-error') {
-        addLog('error', `Runtime Error: ${event.data.error}`, 'runtime');
-      } else if (event.data.type === 'performance-metrics') {
-        setPerformanceMetrics(prev => ({
-          ...prev,
-          loadTime: event.data.loadTime,
-          renderTime: event.data.renderTime,
-          jsErrors: 0,
-          cssErrors: 0
-        }));
-      } else if (event.data.type === 'react-error') {
-        addLog('error', `React Error: ${event.data.error}`, 'react');
-      }
-    };
+   // Listen for messages from iframe and auto-fix errors
+   useEffect(() => {
+     const handleMessage = (event: MessageEvent) => {
+       if (event.data.type === 'runtime-error') {
+         addLog('error', `Runtime Error: ${event.data.error}`, 'runtime');
+         // Trigger immediate analysis for runtime errors
+         if (autoFixEnabled) {
+           setTimeout(() => analyzeAndAutoFix(), 1000);
+         }
+       } else if (event.data.type === 'performance-metrics') {
+         setPerformanceMetrics(prev => ({
+           ...prev,
+           loadTime: event.data.loadTime,
+           renderTime: event.data.renderTime,
+           jsErrors: 0,
+           cssErrors: 0
+         }));
+       } else if (event.data.type === 'react-error') {
+         addLog('error', `React Error: ${event.data.error}`, 'react');
+         // Trigger immediate analysis for React errors
+         if (autoFixEnabled) {
+           setTimeout(() => analyzeAndAutoFix(), 1000);
+         }
+       }
+     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
@@ -657,37 +747,47 @@ Focus on actionable improvements that can be automatically implemented.`;
             </Badge>
           )}
 
-          {/* Control Buttons */}
-          {isRunning ? (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={refreshServer}
-                className="text-white hover:bg-white/20 h-8 px-2"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={stopServer}
-                className="text-white hover:bg-white/20 h-8 px-2"
-              >
-                <Square className="w-4 h-4" />
-              </Button>
-            </>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={startDevServer}
-              disabled={isStarting}
-              className="text-white hover:bg-white/20 h-8 px-2"
-            >
-              <Play className="w-4 h-4" />
-            </Button>
-          )}
+           {/* Control Buttons */}
+           <Button
+             variant="ghost"
+             size="sm"
+             onClick={() => setShowConsole(!showConsole)}
+             className="text-white hover:bg-white/20 h-8 px-2"
+           >
+             <Terminal className="w-4 h-4 mr-1" />
+             {showConsole ? 'Hide' : 'Console'}
+           </Button>
+           
+           {isRunning ? (
+             <>
+               <Button
+                 variant="ghost"
+                 size="sm"
+                 onClick={refreshServer}
+                 className="text-white hover:bg-white/20 h-8 px-2"
+               >
+                 <RefreshCw className="w-4 h-4" />
+               </Button>
+               <Button
+                 variant="ghost"
+                 size="sm"
+                 onClick={stopServer}
+                 className="text-white hover:bg-white/20 h-8 px-2"
+               >
+                 <Square className="w-4 h-4" />
+               </Button>
+             </>
+           ) : (
+             <Button
+               variant="ghost"
+               size="sm"
+               onClick={startDevServer}
+               disabled={isStarting}
+               className="text-white hover:bg-white/20 h-8 px-2"
+             >
+               <Play className="w-4 h-4" />
+             </Button>
+           )}
         </div>
       </div>
 
@@ -734,22 +834,24 @@ Focus on actionable improvements that can be automatically implemented.`;
             </div>
           )}
 
-          {isRunning && devUrl && (
-            <div className="h-full flex items-center justify-center p-4">
-              <div 
-                className="border border-border rounded-lg overflow-hidden shadow-lg bg-white"
-                style={getViewportSize()}
-              >
-                <iframe
-                  ref={iframeRef}
-                  src={devUrl}
-                  className="w-full h-full border-0"
-                  title="Enhanced Live Development Preview"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-                />
-              </div>
-            </div>
-          )}
+           {isRunning && devUrl && (
+             <div className={`h-full flex items-center justify-center p-4 ${viewportMode === 'desktop' ? '' : 'overflow-auto'}`}>
+               <div 
+                 className={`border border-border rounded-lg overflow-hidden shadow-lg bg-white ${
+                   viewportMode === 'desktop' ? 'w-full h-full' : 'mx-auto'
+                 }`}
+                 style={getViewportSize()}
+               >
+                 <iframe
+                   ref={iframeRef}
+                   src={devUrl}
+                   className="w-full h-full border-0"
+                   title="Enhanced Live Development Preview"
+                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                 />
+               </div>
+             </div>
+           )}
 
           {!isStarting && !isRunning && !error && (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -774,8 +876,8 @@ Focus on actionable improvements that can be automatically implemented.`;
           )}
         </div>
 
-        {/* Side Panel - Logs & Metrics */}
-        {isRunning && (
+         {/* Side Panel - Logs & Metrics (Hidden by default) */}
+         {isRunning && showConsole && (
           <div className="w-80 border-l border-border bg-background/50">
             <div className="h-full flex flex-col">
               {/* Metrics */}

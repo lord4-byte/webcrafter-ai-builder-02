@@ -414,11 +414,17 @@ Generated on: ${new Date().toLocaleDateString()}
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden bg-background/20">
-        <ResizablePanelGroup direction="horizontal">
+        <ResizablePanelGroup direction="horizontal" className="h-full">
           {/* AI Chat Panel */}
           {showChat && (
             <>
-              <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
+              <ResizablePanel 
+                id="chat-panel"
+                order={1}
+                defaultSize={25} 
+                minSize={20} 
+                maxSize={40}
+              >
                 <AIChat 
                   projectId={project.id}
                   onCodeUpdate={handleAICodeUpdate}
@@ -432,7 +438,13 @@ Generated on: ${new Date().toLocaleDateString()}
           {showCodeArea ? (
             <>
               {/* File Explorer Panel */}
-              <ResizablePanel defaultSize={showChat ? 20 : 25} minSize={15}>
+              <ResizablePanel 
+                id="explorer-panel"
+                order={2}
+                defaultSize={showChat ? 15 : 20} 
+                minSize={15}
+                maxSize={30}
+              >
                 <FileExplorer
                   files={project.content}
                   activeFile={selectedFile || ''}
@@ -443,7 +455,12 @@ Generated on: ${new Date().toLocaleDateString()}
               <ResizableHandle />
               
               {/* Code Editor Panel */}
-              <ResizablePanel defaultSize={showChat ? 80 : 75} minSize={25}>
+              <ResizablePanel 
+                id="editor-panel"
+                order={3}
+                defaultSize={showChat ? 60 : 80} 
+                minSize={40}
+              >
                 <div className="h-full">
                   {selectedFile ? (
                     <div className="h-full flex flex-col">
@@ -470,7 +487,12 @@ Generated on: ${new Date().toLocaleDateString()}
               </ResizablePanel>
             </>
           ) : (
-            <ResizablePanel defaultSize={showChat ? 75 : 100}>
+            <ResizablePanel 
+              id="preview-panel"
+              order={showChat ? 2 : 1}
+              defaultSize={100}
+              minSize={50}
+            >
               <EnhancedLiveDevServer 
                 projectContent={project.content}
                 isVisible={true}
