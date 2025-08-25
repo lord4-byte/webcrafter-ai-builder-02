@@ -212,11 +212,8 @@ Return a detailed enhanced description that an AI can use to build a production-
         }
       });
 
-      return data?.response || config.description;
-    } catch (error) {
-      console.warn('Failed to enhance prompt, using original:', error);
-      return config.description;
-    }
+      const resp = (data?.response || '').trim();
+      return resp && resp.length > 20 ? resp : config.description;
   };
 
   const enhanceBasicPlan = (basicPlan: any, config: ProjectConfig, enhancedDescription: string): EnhancedProjectPlan => {

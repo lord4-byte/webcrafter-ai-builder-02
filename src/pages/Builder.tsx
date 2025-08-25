@@ -78,15 +78,32 @@ const Builder = () => {
       if (error) throw error;
       if (!data) throw new Error('Project not found');
 
-      const content = typeof data.content === 'string' ? JSON.parse(data.content) : data.content;
+      const rawContent = typeof data.content === 'string' ? JSON.parse(data.content) : data.content;
+      // Sanitize placeholder files on load to avoid '...' content
+      const cleanedOnLoad: { [key: string]: string } = {};
+      Object.entries(rawContent || {}).forEach(([name, content]) => {
+        const c = (content as string || '').trim();
+        if (!c || c === '...' || c.length < 5) return;
+        cleanedOnLoad[name] = content as string;
+      });
+      if (!cleanedOnLoad['index.html']) {
+        cleanedOnLoad['index.html'] = `<div class=\"container mx-auto py-10\"><h1 class=\"text-3xl font-bold mb-4\">${data.name}</h1><div id=\"app\"></div></div>`;
+      }
+      if (!cleanedOnLoad['styles.css']) {
+        cleanedOnLoad['styles.css'] = `body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}`;
+      }
+      if (!cleanedOnLoad['script.js']) {
+        cleanedOnLoad['script.js'] = `document.addEventListener('DOMContentLoaded',()=>{console.log('App ready')});`;
+      }
+
       setProject({
         id: data.id,
         name: data.name,
-        content
+        content: cleanedOnLoad
       });
       
       // Set available files from project content
-      const files = Object.keys(content || {});
+      const files = Object.keys(cleanedOnLoad || {});
       setAvailableFiles(files);
       if (files.length > 0 && !files.includes(activeTab)) {
         setActiveTab(files[0]);
@@ -99,6 +116,44 @@ const Builder = () => {
       });
       navigate("/dashboard");
     }
+  };
+
+  // Sanitize AI-generated files to remove placeholders and ensure runnable preview
+  const sanitizeGeneratedFiles = (files: { [key: string]: string }, projectName: string) => {
+    const cleaned: { [key: string]: string } = {};
+    const strip = (s: string) => (s || '').trim();
+    // Copy only meaningful files (drop ellipses and ultra-short placeholders)
+    Object.entries(files || {}).forEach(([name, content]) => {
+      const c = strip(content as string);
+      if (!c || c === '...' || c === '…' || c.length < 5) return;
+      // Drop nearly-empty React component shells
+      if ((name.endsWith('.tsx') || name.endsWith('.jsx')) && c.length < 20) return;
+      cleaned[name] = content as string;
+    });
+
+    // Ensure empty React stubs don't force React preview
+    Object.keys(files || {}).forEach((name) => {
+      const c = strip(files[name] as string);
+      if ((name.endsWith('.tsx') || name.endsWith('.jsx')) && (!c || c === '...' || c.length < 20)) {
+        delete cleaned[name];
+      }
+    });
+
+    const hasHtml = strip(cleaned['index.html'] || '').length > 0;
+    const hasCss = strip(cleaned['styles.css'] || '').length > 0;
+    const hasJs = strip(cleaned['script.js'] || '').length > 0;
+
+    if (!hasHtml) {
+      cleaned['index.html'] = `\n<div class="container mx-auto py-10">\n  <h1 class="text-3xl font-bold mb-4">${projectName || 'My App'}</h1>\n  <p class="opacity-80">Project scaffold created. Start building your app!</p>\n  <div id=\"app\"></div>\n</div>`;
+    }
+    if (!hasCss) {
+      cleaned['styles.css'] = `:root{--primary:#6366f1}body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif} .container{max-width:960px} button{background:var(--primary);color:#fff;border:none;padding:.5rem 1rem;border-radius:.5rem}`;
+    }
+    if (!hasJs) {
+      cleaned['script.js'] = `document.addEventListener('DOMContentLoaded',()=>{console.log('App ready');const app=document.getElementById('app');if(app){app.innerHTML='<div class=\"mt-6 p-4 rounded border\">Edit script.js to start coding.</div>'}});`;
+    }
+
+    return cleaned;
   };
 
   const generateProject = async (config: any) => {
@@ -128,57 +183,36 @@ const Builder = () => {
       } : null);
 
       // Generate project with AI
-      const { data: aiData, error: aiError } = await supabase.functions.invoke('ai-project-generator', {
-        body: configWithKeys
-      });
-
+      const { data: aiData, error: aiError } = await supabase.functions.invoke('ai-project-generator', { body: configWithKeys });
       if (aiError) throw aiError;
 
-      if (!aiData.files || Object.keys(aiData.files).length === 0) {
-        throw new Error("AI failed to generate project files");
+      const generated = (aiData && aiData.files) ? aiData.files : {};
+      const sanitized = sanitizeGeneratedFiles(generated, project?.name || config?.title || 'App');
+      if (!sanitized || Object.keys(sanitized).length === 0) {
+        throw new Error('AI returned no usable files after sanitization');
       }
 
       // Simulate file generation progress
-      const files = Object.keys(aiData.files);
+      const files = Object.keys(sanitized);
       for (let i = 0; i < files.length; i++) {
-        setGenerationProgress({
-          current: i + 3,
-          total: files.length + 5,
-          currentFile: `Writing file: ${files[i]}`
-        });
-        await new Promise(resolve => setTimeout(resolve, 200));
+        setGenerationProgress({ current: i + 3, total: files.length + 5, currentFile: `Writing file: ${files[i]}` });
+        await new Promise(resolve => setTimeout(resolve, 120));
       }
 
-      setGenerationProgress({
-        current: files.length + 4,
-        total: files.length + 5,
-        currentFile: "Finalizing project..."
-      });
+      setGenerationProgress({ current: files.length + 4, total: files.length + 5, currentFile: 'Finalizing project...' });
 
       // Update project with generated content
       const { error: updateError } = await supabase
-        .from("projects")
-        .update({
-          content: JSON.stringify(aiData.files),
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", projectId);
-
+        .from('projects')
+        .update({ content: JSON.stringify(sanitized), updated_at: new Date().toISOString() })
+        .eq('id', projectId);
       if (updateError) throw updateError;
 
       // Update local state
-      setProject(prev => prev ? {
-        ...prev,
-        content: aiData.files
-      } : null);
+      setProject(prev => prev ? { ...prev, content: sanitized } : null);
+      setAvailableFiles(Object.keys(sanitized));
 
-      setAvailableFiles(Object.keys(aiData.files));
-
-      setGenerationProgress({
-        current: files.length + 5,
-        total: files.length + 5,
-        currentFile: "Project ready!"
-      });
+      setGenerationProgress({ current: files.length + 5, total: files.length + 5, currentFile: 'Project ready!' });
 
       await new Promise(resolve => setTimeout(resolve, 1000));
 

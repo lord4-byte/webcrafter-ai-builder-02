@@ -358,6 +358,19 @@ const EnhancedLiveDevServer = ({
   };
 
   const generateEnhancedVanillaHTML = () => {
+    const rawHtml = (projectContent['index.html'] || projectContent['html'] || '').trim();
+    const rawCss = (projectContent['styles.css'] || projectContent['css'] || '').trim();
+    const rawJs = (projectContent['script.js'] || projectContent['js'] || '').trim();
+
+    const safeHtml = rawHtml && rawHtml !== '...' && rawHtml !== '…' ? rawHtml : `
+<div class="container mx-auto py-10">
+  <h1 class="text-2xl font-bold mb-2">Live Preview</h1>
+  <p class="opacity-80">No full HTML was generated. A scaffold is shown so you can continue.</p>
+  <div id="app"></div>
+</div>`;
+    const safeCss = rawCss && rawCss !== '...' && rawCss !== '…' ? rawCss : '';
+    const safeJs = rawJs && rawJs !== '...' && rawJs !== '…' ? rawJs : "document.addEventListener('DOMContentLoaded',()=>{const app=document.getElementById('app'); if(app){app.innerHTML='<div class=\\"mt-6 p-4 rounded border\\">Edit script.js to start coding.</div>';}});";
+
     return `
 <!DOCTYPE html>
 <html lang="en">
@@ -376,27 +389,15 @@ const EnhancedLiveDevServer = ({
             color: #ffffff;
             min-height: 100vh;
         }
-        ${projectContent['styles.css'] || projectContent['css'] || ''}
-        
-        .dev-indicator {
-          position: fixed;
-          bottom: 20px;
-          right: 20px;
-          background: rgba(0,0,0,0.8);
-          color: white;
-          padding: 8px 12px;
-          border-radius: 6px;
-          font-size: 12px;
-          z-index: 9999;
-        }
+        ${safeCss}
+        .dev-indicator { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.8); color: white; padding: 8px 12px; border-radius: 6px; font-size: 12px; z-index: 9999; }
     </style>
 </head>
 <body>
     <div class="dev-indicator">📡 Live Preview</div>
-    ${projectContent['index.html'] || projectContent['html'] || '<h1>No content available</h1>'}
+    ${safeHtml}
     <script>
-        ${projectContent['script.js'] || projectContent['js'] || ''}
-        
+        ${safeJs}
         // Enhanced error tracking
         window.addEventListener('error', function(e) {
           console.error('Runtime Error:', e.error);
