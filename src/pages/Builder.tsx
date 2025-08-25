@@ -12,6 +12,7 @@ import AIChat from "@/components/builder/AIChat";
 import PublishButton from "@/components/integrations/PublishButton";
 import FileExplorer from "@/components/builder/FileExplorer";
 import EnhancedPreviewFrame from "@/components/builder/EnhancedPreviewFrame";
+import EnhancedLiveDevServer from "@/components/builder/EnhancedLiveDevServer";
 
 interface ProjectData {
   id: string;
@@ -470,11 +471,11 @@ Generated on: ${new Date().toLocaleDateString()}
             </>
           ) : (
             <ResizablePanel defaultSize={showChat ? 75 : 100}>
-              <EnhancedPreviewFrame 
+              <EnhancedLiveDevServer 
                 projectContent={project.content}
-                isGenerating={isGenerating}
-                generationProgress={generationProgress}
-                projectFiles={availableFiles}
+                isVisible={true}
+                projectId={project.id}
+                onCodeUpdate={handleAICodeUpdate}
               />
             </ResizablePanel>
           )}

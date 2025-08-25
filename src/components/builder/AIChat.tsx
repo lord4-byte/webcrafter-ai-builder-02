@@ -32,6 +32,8 @@ const AIChat = ({ projectId, onCodeUpdate, projectContent }: AIChatProps) => {
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [generatingFiles, setGeneratingFiles] = useState<string[]>([]);
+  const [showToDoSystem, setShowToDoSystem] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
