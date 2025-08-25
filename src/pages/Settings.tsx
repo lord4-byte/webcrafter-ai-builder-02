@@ -22,6 +22,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import ApiKeyInput from "@/components/common/ApiKeyInput";
+import HeaderWithSettings from "@/components/layout/HeaderWithSettings";
 
 interface ApiKeys {
   openai: string;
@@ -219,24 +220,15 @@ const Settings = () => {
       </div>
       
       <div className="relative z-10 min-h-screen bg-gradient-to-br from-background/20 via-background/10 to-background/20 backdrop-blur-xl">
-        {/* Enhanced Glassmorphism Header */}
-        <header className="bg-background/15 backdrop-blur-xl border-b border-white/20 shadow-lg">
-          <div className="container mx-auto px-6 py-4">
+        <HeaderWithSettings showBackButton backTo="/dashboard" title="Settings" />
+        
+        {/* Save Button Bar */}
+        <div className="fixed top-16 left-0 right-0 z-40 bg-background/15 backdrop-blur-xl border-b border-white/20 shadow-lg">
+          <div className="container mx-auto px-6 py-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => navigate("/")}
-                  className="bg-white/10 backdrop-blur-sm hover:bg-white/20 border border-white/20"
-                >
-                  <Home className="w-4 h-4 mr-2" />
-                  Home
-                </Button>
-                <div className="flex items-center space-x-2">
-                  <SettingsIcon className="w-5 h-5 text-primary" />
-                  <h1 className="text-xl font-bold">Settings</h1>
-                </div>
+              <div className="flex items-center space-x-2">
+                <SettingsIcon className="w-5 h-5 text-primary" />
+                <h1 className="text-xl font-bold">API Configuration</h1>
               </div>
               <Button onClick={saveApiKeys} disabled={isSaving} className="bg-primary/80 backdrop-blur-sm hover:bg-primary/90">
                 <Save className="w-4 h-4 mr-2" />
@@ -244,10 +236,10 @@ const Settings = () => {
               </Button>
             </div>
           </div>
-        </header>
+        </div>
 
         {/* Enhanced Glassmorphism Main Content */}
-        <main className="container mx-auto px-6 py-8 bg-gradient-to-br from-white/5 via-transparent to-white/5">
+        <main className="container mx-auto px-6 py-8 mt-20 bg-gradient-to-br from-white/5 via-transparent to-white/5">
           <Tabs defaultValue="api-keys" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3 bg-background/30 backdrop-blur-lg border border-white/20">
               <TabsTrigger value="api-keys" className="data-[state=active]:bg-primary/20 data-[state=active]:backdrop-blur-sm">API Configuration</TabsTrigger>

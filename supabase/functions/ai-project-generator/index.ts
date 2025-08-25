@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import OpenAI from "https://deno.land/x/openai@v4.67.3/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -70,12 +71,22 @@ serve(async (req) => {
     };
 
     if (apiKeys?.openrouter && apiKeys.openrouter.trim()) {
+      // Use OpenAI SDK with OpenRouter configuration
+      const openrouter = new OpenAI({
+        baseURL: 'https://openrouter.ai/api/v1',
+        apiKey: apiKeys.openrouter,
+        defaultHeaders: {
+          'HTTP-Referer': 'https://webcrafter.ai',
+          'X-Title': 'WebCrafter AI',
+        },
+      });
+      
       apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
       apiKey = apiKeys.openrouter;
-      model = 'meta-llama/llama-3.2-3b-instruct:free';
+      model = 'meta-llama/llama-3.1-70b-instruct:free';
       headers['Authorization'] = `Bearer ${apiKey}`;
       headers['HTTP-Referer'] = 'https://webcrafter.ai';
-      headers['X-Title'] = 'AI Website Builder';
+      headers['X-Title'] = 'WebCrafter AI';
     } else if (apiKeys?.openai && apiKeys.openai.trim()) {
       apiUrl = 'https://api.openai.com/v1/chat/completions';
       apiKey = apiKeys.openai;

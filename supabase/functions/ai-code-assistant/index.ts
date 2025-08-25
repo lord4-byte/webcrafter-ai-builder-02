@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import OpenAI from "https://deno.land/x/openai@v4.67.3/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,12 +23,22 @@ serve(async (req) => {
     };
 
     if (apiKeys?.openrouter && apiKeys.openrouter.trim()) {
+      // Use OpenAI SDK with OpenRouter configuration
+      const openrouter = new OpenAI({
+        baseURL: 'https://openrouter.ai/api/v1',
+        apiKey: apiKeys.openrouter,
+        defaultHeaders: {
+          'HTTP-Referer': 'https://webcrafter.ai',
+          'X-Title': 'WebCrafter AI',
+        },
+      });
+      
       apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
       apiKey = apiKeys.openrouter;
-      model = apiKeys?.selectedModels?.openrouter || 'meta-llama/llama-3.2-3b-instruct:free';
+      model = apiKeys?.selectedModels?.openrouter || 'meta-llama/llama-3.1-70b-instruct:free';
       headers['Authorization'] = `Bearer ${apiKey}`;
       headers['HTTP-Referer'] = 'https://webcrafter.ai';
-      headers['X-Title'] = 'AI Website Builder';
+      headers['X-Title'] = 'WebCrafter AI';
     } else if (apiKeys?.openai && apiKeys.openai.trim()) {
       apiUrl = 'https://api.openai.com/v1/chat/completions';
       apiKey = apiKeys.openai;
@@ -62,17 +73,31 @@ serve(async (req) => {
       });
     }
 
-    const context = `You are an advanced AI web app builder and agent. You work directly with code files - no explanations, just code modifications. When user requests changes, modifications, or fixes, respond with updated file contents.
+    const context = `You are an advanced AI agent that acts like Lovable.dev's AI assistant. You modify code files directly and apply changes in real-time.
+
+CRITICAL AGENT BEHAVIOR:
+- Act as a strict AGENT - directly modify code files, never show code snippets in responses
+- Analyze the user's request thoroughly before making any changes
+- Apply modifications directly to the generated code files
+- Respond only with confirmation messages like "Changes applied successfully. Preview updated."
+- Never output code blocks, JSON structures, or technical details in the response
+
+ANALYSIS PROCESS:
+1. Understand the exact user request and its implications
+2. Identify which files need modification
+3. Plan the optimal solution approach
+4. Generate complete, production-ready code
+5. Apply changes directly to project files
 
 Current project files: ${JSON.stringify(projectContent, null, 2)}
 User message: ${message}
 
-IMPORTANT: 
-- Always provide COMPLETE file contents, never truncated
-- Apply the user's request directly to the code
-- Generate production-ready, functional code
+REQUIREMENTS:
+- Provide COMPLETE file contents, never truncated or partial
 - Use modern React patterns, TypeScript, and Tailwind CSS
-- Ensure all functionality works properly
+- Ensure all functionality works properly and handles edge cases
+- Make code production-ready with proper error handling
+- Apply best practices for performance and maintainability
 
 Respond with valid JSON: {"response": "Changes applied successfully. Preview updated.", "codeChanges": [{"file": "filename", "content": "complete updated file content"}]}`;
 
