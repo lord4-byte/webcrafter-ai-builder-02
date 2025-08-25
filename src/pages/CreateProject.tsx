@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import ProjectCreationWizard, { ProjectConfig } from "@/components/builder/ProjectCreationWizard";
-import ProjectPlanReview from "@/components/builder/ProjectPlanReview";
+import EnhancedProjectPlanReview from "@/components/builder/EnhancedProjectPlanReview";
 
 const CreateProject = () => {
   const navigate = useNavigate();
@@ -132,7 +132,7 @@ const CreateProject = () => {
         </div>
         
         <div className="relative z-10 min-h-screen bg-background/40">
-          <ProjectPlanReview
+          <EnhancedProjectPlanReview
             config={projectConfig}
             projectId={createdProjectId}
             onProceed={handleProceedToBuild}
