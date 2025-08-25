@@ -79,6 +79,17 @@ const IntelligentToDoSystem = ({
     loadToDoLists();
   }, [projectId]);
 
+  // Listen for task generation requests from AI Chat
+  useEffect(() => {
+    const handleGenerateTodo = (event: CustomEvent) => {
+      const { message } = event.detail;
+      generateToDoFromMessage(message);
+    };
+
+    window.addEventListener('generate-todo', handleGenerateTodo as EventListener);
+    return () => window.removeEventListener('generate-todo', handleGenerateTodo as EventListener);
+  }, []);
+
   const loadToDoLists = async () => {
     // Load persisted to-do lists for this project
     const key = `webcrafter_todos_${projectId}`;
@@ -263,33 +274,48 @@ Make tasks granular and specific. Each task should be independently executable.`
       const apiKeys = savedKeys ? JSON.parse(savedKeys) : {};
       const selectedModels = savedModels ? JSON.parse(savedModels) : {};
 
-      const prompt = `Execute the following task in the context of the project:
+      const prompt = `Execute this specific task as an AI coding agent:
 
-Task: ${task.title}
+TASK DETAILS:
+Title: ${task.title}
 Description: ${task.description}
-Affected Files: ${task.affectedFiles.join(', ')}
+Priority: ${task.priority}
+Estimated Time: ${task.estimatedTime}
 
-Code Changes Required:
+AFFECTED FILES: ${task.affectedFiles.join(', ')}
+
+REQUIRED CODE CHANGES:
 ${task.codeChanges.map(change => 
-  `- ${change.action.toUpperCase()} ${change.file}: ${change.description}`
+  `• ${change.action.toUpperCase()} ${change.file}: ${change.description}${change.preview ? '\n  Preview: ' + change.preview : ''}`
 ).join('\n')}
 
-Current Project Files:
+CURRENT PROJECT CONTEXT:
 ${Object.entries(projectContent).map(([file, content]) => 
-  task.affectedFiles.includes(file) 
-    ? `=== ${file} ===\n${content}\n`
-    : `=== ${file} === (reference only)`
+  `=== ${file} ${task.affectedFiles.includes(file) ? '(MODIFY THIS)' : '(REFERENCE)'} ===\n${content.substring(0, 3000)}${content.length > 3000 ? '\n[CONTENT TRUNCATED]' : ''}\n`
 ).join('\n')}
 
-Please provide the complete updated file contents for each affected file. Return in JSON format:
+AI ANALYSIS:
+- Complexity: ${task.aiAnalysis?.complexity || 'Unknown'}/10
+- Risk Level: ${task.aiAnalysis?.riskLevel || 'medium'}
+- Recommendations: ${task.aiAnalysis?.recommendations?.join('; ') || 'None'}
+
+RESPONSE FORMAT (REQUIRED):
 {
+  "analysis": "What I understood about this task",
   "files": {
-    "filename": "complete file content"
+    "filename.ext": "COMPLETE file content with all changes applied"
   },
-  "summary": "What was implemented"
+  "summary": "What was implemented and why",
+  "verification": "How to verify the changes work"
 }
 
-IMPORTANT: Provide complete, working file contents with no truncation or placeholders.`;
+CRITICAL REQUIREMENTS:
+1. Provide COMPLETE file contents for each affected file
+2. Never use placeholders, ellipsis, or "keep existing code" comments
+3. Ensure all imports, exports, and syntax are correct
+4. Maintain existing functionality while implementing the requested changes
+5. Use TypeScript, React best practices, and Tailwind CSS design tokens
+6. Handle edge cases and add proper error handling where needed`;
 
       const { data, error } = await supabase.functions.invoke('ai-code-assistant', {
         body: {
@@ -308,16 +334,30 @@ IMPORTANT: Provide complete, working file contents with no truncation or placeho
 
       let response;
       try {
-        response = JSON.parse(data.response || data.content || '{}');
+        const rawResponse = data.response || data.content || '{}';
+        response = typeof rawResponse === 'string' ? JSON.parse(rawResponse) : rawResponse;
       } catch (e) {
-        throw new Error('Failed to parse AI response');
+        console.error('Failed to parse AI response for task execution:', e);
+        throw new Error('AI response could not be parsed. Please try again.');
       }
 
-      // Apply code changes
-      if (response.files) {
+      // Apply code changes with validation
+      if (response.files && Object.keys(response.files).length > 0) {
+        let successCount = 0;
         Object.entries(response.files).forEach(([filename, content]) => {
-          onCodeUpdate(filename, content as string);
+          if (filename && content && typeof content === 'string' && content.trim().length > 0) {
+            onCodeUpdate(filename, content as string);
+            successCount++;
+          } else {
+            console.warn(`Skipping invalid file update: ${filename}`);
+          }
         });
+        
+        if (successCount === 0) {
+          throw new Error('No valid file changes were provided by the AI agent.');
+        }
+      } else {
+        throw new Error('No file changes were provided by the AI agent.');
       }
 
       // Update task status to completed

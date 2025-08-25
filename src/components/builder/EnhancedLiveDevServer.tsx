@@ -76,6 +76,7 @@ const EnhancedLiveDevServer = ({
   const [autoFixEnabled, setAutoFixEnabled] = useState(true);
   const [viewportMode, setViewportMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [showConsole, setShowConsole] = useState(false);
+  const [realTimeErrorFix, setRealTimeErrorFix] = useState(true);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { toast } = useToast();
 

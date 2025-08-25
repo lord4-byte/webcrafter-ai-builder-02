@@ -196,22 +196,63 @@ CRITICAL: Act as a true agent - analyze, plan, and implement complete solutions.
 
       let aiResponse;
       try {
-        // Try to parse as JSON first (for code modifications)
-        aiResponse = JSON.parse(data.response || data.content || '{}');
+        // Parse the AI response
+        const rawResponse = data.response || data.content || '{}';
+        aiResponse = typeof rawResponse === 'string' ? JSON.parse(rawResponse) : rawResponse;
       } catch (e) {
-        // If not JSON, treat as regular text response
-        aiResponse = { analysis: data.response || data.content || "I've processed your request." };
+        console.warn('Failed to parse AI response as JSON:', e);
+        // Try to extract meaningful content
+        const textResponse = data.response || data.content || "I've processed your request.";
+        aiResponse = { 
+          analysis: textResponse,
+          response: textResponse,
+          files: {},
+          summary: "Response processed"
+        };
       }
 
       // Create AI message with comprehensive response
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'ai',
-        content: aiResponse.analysis || aiResponse.summary || data.response || "I've analyzed your request and implemented the necessary changes.",
+        content: aiResponse.analysis || aiResponse.response || aiResponse.summary || "I've analyzed your request and implemented the necessary changes.",
         timestamp: new Date(),
       };
 
       setMessages(prev => [...prev, aiMessage]);
+
+      // Check if this request should generate tasks
+      const shouldGenerateTasks = currentMessage.toLowerCase().includes('task') || 
+                                  currentMessage.toLowerCase().includes('todo') ||
+                                  currentMessage.toLowerCase().includes('plan') ||
+                                  currentMessage.toLowerCase().includes('implement') ||
+                                  currentMessage.toLowerCase().includes('build') ||
+                                  currentMessage.toLowerCase().includes('create') ||
+                                  currentMessage.toLowerCase().includes('fix') ||
+                                  currentMessage.toLowerCase().includes('add');
+
+      if (shouldGenerateTasks && (!aiResponse.files || Object.keys(aiResponse.files).length === 0)) {
+        // Auto-switch to tasks and generate tasks
+        setTimeout(() => {
+          setShowToDoSystem(true);
+          // Trigger task generation in the todo system
+          const todoEvent = new CustomEvent('generate-todo', { 
+            detail: { message: currentMessage, projectContent } 
+          });
+          window.dispatchEvent(todoEvent);
+        }, 500);
+
+        const taskMessage: Message = {
+          id: (Date.now() + 3).toString(),
+          type: 'ai',
+          content: "🎯 I've switched to the Tasks tab and am generating a detailed task list for your request. This will break down the work into manageable steps.",
+          timestamp: new Date(),
+        };
+        
+        setTimeout(() => {
+          setMessages(prev => [...prev, taskMessage]);
+        }, 600);
+      }
 
       // Apply code changes if any were returned (AI agent mode)
       if (aiResponse.files && Object.keys(aiResponse.files).length > 0) {
@@ -221,16 +262,18 @@ CRITICAL: Act as a true agent - analyze, plan, and implement complete solutions.
         setGeneratingFiles(Object.keys(aiResponse.files));
         
         // Apply changes with small delays to show progress
+        let delay = 0;
         for (const [filename, content] of Object.entries(aiResponse.files)) {
           setTimeout(() => {
             onCodeUpdate(filename, content as string);
-          }, 200);
+          }, delay);
+          delay += 200;
         }
 
         // Clear generating files after a delay
         setTimeout(() => {
           setGeneratingFiles([]);
-        }, 1000);
+        }, delay + 500);
 
         toast({
           title: "AI Agent: Code Modified",
@@ -248,7 +291,7 @@ CRITICAL: Act as a true agent - analyze, plan, and implement complete solutions.
           
           setTimeout(() => {
             setMessages(prev => [...prev, summaryMessage]);
-          }, 500);
+          }, delay + 300);
         }
       } else if (data.codeChanges && data.codeChanges.length > 0) {
         // Fallback for old format

@@ -73,33 +73,49 @@ serve(async (req) => {
       });
     }
 
-    const context = `You are an advanced AI agent that acts like Lovable.dev's AI assistant. You modify code files directly and apply changes in real-time.
+    const context = `You are an intelligent AI coding agent for Lovable.dev. You must analyze requests, generate complete working code, and provide structured responses for real-time implementation.
 
-CRITICAL AGENT BEHAVIOR:
-- Act as a strict AGENT - directly modify code files, never show code snippets in responses
-- Analyze the user's request thoroughly before making any changes
-- Apply modifications directly to the generated code files
-- Respond only with confirmation messages like "Changes applied successfully. Preview updated."
-- Never output code blocks, JSON structures, or technical details in the response
+CRITICAL RESPONSE FORMAT:
+Always respond with valid JSON in this exact structure:
+{
+  "analysis": "Brief analysis of what needs to be done",
+  "files": {
+    "filename.ext": "COMPLETE file content with all changes applied"
+  },
+  "summary": "What was implemented",
+  "response": "User-friendly confirmation message"
+}
 
-ANALYSIS PROCESS:
-1. Understand the exact user request and its implications
-2. Identify which files need modification
-3. Plan the optimal solution approach
-4. Generate complete, production-ready code
-5. Apply changes directly to project files
+AGENT BEHAVIOR:
+1. DEEP ANALYSIS: Understand the user's request completely
+2. COMPLETE IMPLEMENTATION: Provide full, working file contents (never truncated)
+3. REAL-TIME READY: Generate code that can be immediately applied
+4. ERROR-FREE: Ensure all code is syntactically correct and functional
+5. MODERN STANDARDS: Use React 18+, TypeScript, Tailwind CSS best practices
 
-Current project files: ${JSON.stringify(projectContent, null, 2)}
-User message: ${message}
+CURRENT PROJECT CONTEXT:
+Project ID: ${projectId}
+Files: ${Object.keys(projectContent).join(', ')}
+User Request: "${message}"
+
+CONVERSATION HISTORY:
+${conversationHistory?.slice(-5).map(msg => `${msg.type}: ${msg.content}`).join('\n') || 'No prior conversation'}
+
+PROJECT FILES:
+${Object.entries(projectContent).map(([file, content]) => 
+  `=== ${file} ===\n${content.substring(0, 2000)}${content.length > 2000 ? '\n[TRUNCATED - Full content available]' : ''}\n`
+).join('\n')}
 
 REQUIREMENTS:
-- Provide COMPLETE file contents, never truncated or partial
-- Use modern React patterns, TypeScript, and Tailwind CSS
-- Ensure all functionality works properly and handles edge cases
-- Make code production-ready with proper error handling
-- Apply best practices for performance and maintainability
+- Always provide COMPLETE file contents
+- Never use placeholders like "// ... rest of component"
+- Ensure all imports, exports, and syntax are correct
+- Handle TypeScript types properly
+- Use semantic design tokens from tailwind.config.ts
+- Implement proper error handling and loading states
+- Follow React best practices and hooks usage rules
 
-Respond with valid JSON: {"response": "Changes applied successfully. Preview updated.", "codeChanges": [{"file": "filename", "content": "complete updated file content"}]}`;
+CRITICAL: Your response must be valid JSON that can be parsed immediately.`;
 
     let requestBody: any;
     
@@ -161,14 +177,55 @@ Respond with valid JSON: {"response": "Changes applied successfully. Preview upd
     
     let parsedResponse;
     try {
+      // Try to parse the AI response as JSON
       parsedResponse = JSON.parse(aiResponse);
+      
+      // Normalize response format for compatibility
+      if (!parsedResponse.files && parsedResponse.codeChanges) {
+        // Convert old format to new format
+        const files: { [key: string]: string } = {};
+        parsedResponse.codeChanges.forEach((change: any) => {
+          if (change.file && change.content) {
+            files[change.file] = change.content;
+          }
+        });
+        parsedResponse.files = files;
+      }
+      
+      // Ensure response has required fields
+      if (!parsedResponse.response && !parsedResponse.analysis) {
+        parsedResponse.response = "Changes have been applied successfully.";
+      }
+      
     } catch (e) {
-      console.error('JSON parsing error:', e);
-      // Provide fallback response
-      parsedResponse = { 
-        response: "Changes applied. Unable to parse full response.", 
-        codeChanges: [] 
-      };
+      console.error('JSON parsing error:', e, 'Raw response:', aiResponse);
+      
+      // Try to extract code changes from non-JSON response
+      const codeBlockRegex = /```[\w]*\n([\s\S]*?)\n```/g;
+      const matches = [...aiResponse.matchAll(codeBlockRegex)];
+      
+      if (matches.length > 0) {
+        const files: { [key: string]: string } = {};
+        matches.forEach((match, index) => {
+          const filename = `generated-file-${index + 1}.tsx`;
+          files[filename] = match[1];
+        });
+        
+        parsedResponse = {
+          analysis: "Extracted code from AI response",
+          files,
+          summary: "Generated code files from AI response",
+          response: "Code extracted and applied successfully."
+        };
+      } else {
+        // Complete fallback
+        parsedResponse = { 
+          analysis: "AI response could not be parsed",
+          response: aiResponse.substring(0, 500) + (aiResponse.length > 500 ? '...' : ''),
+          files: {},
+          summary: "Response processed but no code changes identified"
+        };
+      }
     }
 
     return new Response(JSON.stringify(parsedResponse), {
