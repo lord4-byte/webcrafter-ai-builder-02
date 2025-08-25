@@ -223,7 +223,7 @@ const Settings = () => {
         <HeaderWithSettings showBackButton backTo="/dashboard" title="Settings" />
         
         {/* Save Button Bar */}
-        <div className="fixed top-16 left-0 right-0 z-40 bg-background/15 backdrop-blur-xl border-b border-white/20 shadow-lg">
+        <div className="fixed top-20 left-0 right-0 z-40 bg-background/15 backdrop-blur-xl border-b border-white/20 shadow-lg">
           <div className="container mx-auto px-6 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -239,7 +239,7 @@ const Settings = () => {
         </div>
 
         {/* Enhanced Glassmorphism Main Content */}
-        <main className="container mx-auto px-6 py-8 mt-20 bg-gradient-to-br from-white/5 via-transparent to-white/5">
+        <main className="container mx-auto px-6 py-8 mt-32 bg-gradient-to-br from-white/5 via-transparent to-white/5">
           <Tabs defaultValue="api-keys" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3 bg-background/30 backdrop-blur-lg border border-white/20">
               <TabsTrigger value="api-keys" className="data-[state=active]:bg-primary/20 data-[state=active]:backdrop-blur-sm">API Configuration</TabsTrigger>
@@ -444,6 +444,9 @@ const Settings = () => {
           </Tabs>
         </main>
       </div>
+      
+      {/* Footer to hide Spline watermark */}
+      <footer className="fixed bottom-0 left-0 right-0 z-50 h-8 bg-background/80 backdrop-blur-md border-t border-border/50"></footer>
     </div>
   );
 };

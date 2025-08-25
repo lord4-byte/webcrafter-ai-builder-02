@@ -40,6 +40,9 @@ const Index = () => {
           <Footer />
         </div>
       </div>
+      
+      {/* Footer to hide Spline watermark */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 h-8 bg-background/80 backdrop-blur-md border-t border-border/50"></div>
     </div>
   );
 };
