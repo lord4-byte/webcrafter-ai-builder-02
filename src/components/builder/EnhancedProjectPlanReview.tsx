@@ -574,34 +574,86 @@ Return a detailed enhanced description that an AI can use to build a production-
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <h4 className="font-semibold mb-3">Complete Folder Structure</h4>
-                  <div className="grid gap-3">
-                    {plan.architecture.folder_structure.map((folder, index) => (
-                      <div key={index} className="bg-muted p-3 rounded-md">
-                        <div className="flex items-center gap-2 mb-1">
-                          <FolderTree className="w-4 h-4" />
-                          <span className="font-mono font-medium">{folder.path}</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{folder.description}</p>
-                      </div>
-                    ))}
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <FolderTree className="w-4 h-4" />
+                    Complete Project Structure
+                  </h4>
+                  <div className="bg-muted p-4 rounded-md font-mono text-sm">
+                    <div className="space-y-1">
+                      <div className="text-primary font-semibold">📁 project-root/</div>
+                      <div className="ml-4">├── 📄 index.html</div>
+                      <div className="ml-4">├── 📄 package.json</div>
+                      <div className="ml-4">├── 📄 tailwind.config.js</div>
+                      <div className="ml-4">├── 📄 vite.config.js</div>
+                      <div className="ml-4">├── 📁 src/</div>
+                      <div className="ml-8">│   ├── 📄 main.js</div>
+                      <div className="ml-8">│   ├── 📄 App.js</div>
+                      <div className="ml-8">│   ├── 📄 index.css</div>
+                      <div className="ml-8">│   ├── 📁 components/</div>
+                      {plan.architecture.key_files.filter(f => f.name.includes('component')).map((file, index) => (
+                        <div key={index} className="ml-12">│   │   ├── 📄 {file.name}</div>
+                      ))}
+                      <div className="ml-8">│   ├── 📁 pages/</div>
+                      {plan.architecture.key_files.filter(f => f.name.includes('page') || f.name.includes('Page')).map((file, index) => (
+                        <div key={index} className="ml-12">│   │   ├── 📄 {file.name}</div>
+                      ))}
+                      <div className="ml-8">│   ├── 📁 hooks/</div>
+                      {plan.architecture.key_files.filter(f => f.name.includes('hook') || f.name.includes('use')).map((file, index) => (
+                        <div key={index} className="ml-12">│   │   ├── 📄 {file.name}</div>
+                      ))}
+                      <div className="ml-8">│   ├── 📁 utils/</div>
+                      {plan.architecture.key_files.filter(f => f.name.includes('util') || f.name.includes('helper')).map((file, index) => (
+                        <div key={index} className="ml-12">│   │   ├── 📄 {file.name}</div>
+                      ))}
+                      <div className="ml-8">│   └── 📁 assets/</div>
+                      <div className="ml-12">│       ├── 📄 logo.svg</div>
+                      <div className="ml-12">│       └── 📁 images/</div>
+                      <div className="ml-4">├── 📁 public/</div>
+                      <div className="ml-8">│   ├── 📄 favicon.ico</div>
+                      <div className="ml-8">│   └── 📄 robots.txt</div>
+                      <div className="ml-4">└── 📄 README.md</div>
+                    </div>
                   </div>
                 </div>
                 
                 <div>
-                  <h4 className="font-semibold mb-3">Key Files & Their Purposes</h4>
-                  <div className="space-y-2">
-                    {plan.architecture.key_files.map((file, index) => (
-                      <div key={index} className="flex items-start justify-between p-2 border rounded">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <FileCode2 className="w-4 h-4" />
-                            <Badge variant="outline" className="font-mono">{file.name}</Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mt-1">{file.purpose}</p>
-                        </div>
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <FileCode2 className="w-4 h-4" />
+                    All Generated Files ({plan.architecture.key_files.length + 8} total)
+                  </h4>
+                  <div className="grid gap-3">
+                    {/* Core Framework Files */}
+                    <div className="border rounded-md p-3">
+                      <h5 className="font-medium text-sm mb-2 text-primary">⚡ Core Framework Files</h5>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        <Badge variant="outline" className="font-mono">index.html</Badge>
+                        <Badge variant="outline" className="font-mono">package.json</Badge>
+                        <Badge variant="outline" className="font-mono">vite.config.js</Badge>
+                        <Badge variant="outline" className="font-mono">tailwind.config.js</Badge>
+                        <Badge variant="outline" className="font-mono">src/main.js</Badge>
+                        <Badge variant="outline" className="font-mono">src/App.js</Badge>
+                        <Badge variant="outline" className="font-mono">src/index.css</Badge>
+                        <Badge variant="outline" className="font-mono">README.md</Badge>
                       </div>
-                    ))}
+                    </div>
+
+                    {/* Application Files */}
+                    <div className="border rounded-md p-3">
+                      <h5 className="font-medium text-sm mb-2 text-primary">🚀 Application Files</h5>
+                      <div className="space-y-2">
+                        {plan.architecture.key_files.map((file, index) => (
+                          <div key={index} className="flex items-start justify-between p-2 bg-muted rounded">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <FileCode2 className="w-4 h-4" />
+                                <Badge variant="secondary" className="font-mono">{file.name}</Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">{file.purpose}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
